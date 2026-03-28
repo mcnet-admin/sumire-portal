@@ -191,15 +191,23 @@
         
         if (dateObj.getDate() === now.getDate()) cell.classList.add("today");
 
-        // クリックイベント：事前入力URLを生成してジャンプ
         cell.onclick = () => {
-          const targetUrl = `${FORM_URL}?usp=pp_url&${ENTRY_ID}=${encodeURIComponent(dateString)}`;
-          window.location.href = targetUrl;
-        };
+          const dateString = `${month + 1}/${date}(${week[dateObj.getDay()]})`;
+          const entryId = "entry.1684633535";
+  
+  // フォームのベースURL
+  const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSeGWZ6eMGoI0MWQUxt5dzeGJ4O2-j4zpXVnQf_JWXJnz-1U-Q/viewform";
 
-        grid.appendChild(cell);
-      }
-    }
+  // 【ポイント】パラメータを組み立て
+  // ?usp=pp_url : 事前入力モード
+  // &entry...  : 日付データ
+  // &continue=1 : セクションを維持して進むためのフラグ（環境により挙動が変わります）
+  const finalUrl = `${formUrl}?usp=pp_url&${entryId}=${encodeURIComponent(dateString)}`;
+
+  window.location.href = finalUrl;
+};
+
+
 
     generateCalendar();
   </script>
