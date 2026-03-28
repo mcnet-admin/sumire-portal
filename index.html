@@ -5,208 +5,132 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>すみれクラブ 予約ポータル</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
   <style>
-    :root {
-      --main-purple: #7e57c2;
-      --hover-purple: #6a45b0;
-      --bg-color: #f8f9fa;
-    }
-    body {
-      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-      background: var(--bg-color);
-      display: flex;
-      justify-content: center;
-      padding: 20px;
-      margin: 0;
-      color: #333;
-    }
-    .card {
-      background: white;
-      padding: 25px;
-      border-radius: 24px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-      text-align: center;
-      width: 100%;
-      max-width: 400px;
-    }
-    h2 { color: var(--main-purple); margin-bottom: 5px; font-size: 1.4em; }
-    .today-box {
-      font-size: 1.1em;
-      font-weight: bold;
-      margin: 15px 0;
-      color: #666;
-    }
+    :root { --main-purple: #7e57c2; --hover-purple: #6a45b0; --bg-color: #f0f2f5; --disabled-color: #e0e0e0; }
+    body { font-family: sans-serif; background: var(--bg-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 95%; max-width: 400px; }
+    h3 { color: var(--main-purple); margin-bottom: 10px; }
+    .today-box { font-size: 1em; font-weight: bold; margin-bottom: 15px; color: #555; }
     
-    /* カレンダーエリア */
-    .calendar-container {
-      margin-top: 20px;
-      border: 1px solid #eee;
-      border-radius: 15px;
-      padding: 10px;
+    /* リスト形式のグリッド */
+    .calendar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; }
+    
+    .date-cell { 
+      padding: 15px 5px; border-radius: 12px; background: #fff; border: 2px solid #eee; 
+      cursor: pointer; transition: 0.2s; font-size: 0.95em; font-weight: bold; line-height: 1.4;
     }
-    .calendar-header {
-      font-weight: bold;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .date-cell:hover:not(.disabled) { border-color: var(--main-purple); background: #f3efff; }
+    
+    /* 無効な日のスタイル */
+    .date-cell.disabled { 
+      background: var(--disabled-color); border-color: #d0d0d0; color: #888; cursor: not-allowed; 
     }
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 5px;
-    }
-    .day-label { font-size: 0.7em; color: #999; padding-bottom: 5px; }
-    .date-cell {
-      padding: 10px 0;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.9em;
-      transition: 0.2s;
-      background: #fdfdfd;
-      border: 1px solid #f0f0f0;
-    }
-    .date-cell:hover { background: var(--main-purple); color: white; }
-    .date-cell.disabled {
-      color: #ccc;
-      background: #f5f5f5;
-      pointer-events: none;
-      border: none;
-    }
-    .date-cell.today { border: 2px solid var(--main-purple); font-weight: bold; }
+    .reason-tag { font-size: 0.7em; font-weight: normal; display: block; margin-top: 4px; color: #999; }
 
-    /* ボタン類 */
-    .btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 15px;
-      border-radius: 12px;
-      text-decoration: none;
-      color: white;
-      font-weight: bold;
-      margin-top: 15px;
-      transition: 0.3s;
-    }
-    .btn-purple { background: var(--main-purple); }
-    .btn-purple:hover { background: var(--hover-purple); transform: translateY(-2px); }
-    
-    .info-text {
-      font-size: 0.8em;
-      color: #888;
-      margin-top: 15px;
-      line-height: 1.5;
-      text-align: left;
-    }
-    .rule-box {
-      background: #fff9db;
-      padding: 10px;
-      border-radius: 10px;
-      font-size: 0.75em;
-      margin-top: 15px;
-      border-left: 4px solid #fcc419;
-    }
+    .info-text { font-size: 0.8em; color: #777; margin-top: 20px; text-align: left; line-height: 1.5; background: #f9f9f9; padding: 10px; border-radius: 8px; }
   </style>
 </head>
-
 <body>
-  <div class="card">
-    <h2>すみれクラブ 予約ポータル</h2>
-    <div class="today-box" id="today-display"></div>
 
-    <div class="rule-box">
-      <strong>【最新優先ルール】</strong><br>
-      同じ日の予約を複数回送られた場合は、一番最後に送信した内容が有効になります。
+<div class="card">
+  <h3>すみれクラブ 予約ポータル</h3>
+  <div id="today-display" class="today-box"></div>
+  
+  <p style="font-size: 0.9em; color: #666;">希望する日付を選択してください（2週間先まで）</p>
+
+  <div class="calendar-grid" id="calendar-grid">
     </div>
 
-    <div class="calendar-container">
-      <div class="calendar-header">
-        <span id="month-label">2026年3月</span>
-      </div>
-      <div class="calendar-grid" id="calendar-grid">
-        <div class="day-label">日</div><div class="day-label">月</div><div class="day-label">火</div>
-        <div class="day-label">水</div><div class="day-label">木</div><div class="day-label">金</div><div class="day-label">土</div>
-        </div>
-    </div>
-
-    <p class="info-text">
-      <i class="fas fa-info-circle"></i> 上記のカレンダーから<strong>希望日を選択</strong>してください。自動的に申込フォームへ進みます。<br>
-      <i class="fas fa-clock"></i> 予約締切：前日 15:30 まで
-    </p>
-
-    <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
-
-    <a class="btn btn-purple" style="background:#666; cursor:default;">
-      <i class="fas fa-umbrella-beach"></i> 長期休暇（準備中）
-    </a>
+  <div class="info-text">
+    <i class="fas fa-info-circle"></i> 翌月分の予約は毎月10日から可能です。<br>
+    <i class="fas fa-clock"></i> 変更・取消は前日の15:30までとなります。<br>
+    <i class="fas fa-phone"></i> 締切後や当日の欠席等は、園まで直接お電話ください。
   </div>
+</div>
 
-
-
-  // --------
-  <script>
+<script>
   // --- 基本設定 ---
   const ENTRY_ID = "entry.1684633535";
   const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeGWZ6eMGoI0MWQUxt5dzeGJ4O2-j4zpXVnQf_JWXJnz-1U-Q/viewform";
-
   const weekLabels = ["日","月","火","水","木","金","土"];
+  
+  // --- 休日一覧 (2026_休日一覧シートより反映) ---
+  const HOLIDAYS = [
+    "2026-03-20", "2026-03-23", "2026-03-24", "2026-03-25", "2026-03-26", "2026-03-27", "2026-03-30",
+    "2026-03-31", "2026-04-01", "2026-04-08", "2026-04-13"
+  ];
+
   const now = new Date();
 
-  function generateCalendar() {
+  function generateDateList() {
     const grid = document.getElementById("calendar-grid");
-    if (!grid) return;
+    const todayDisp = document.getElementById("today-display");
+    
+    // 今日の日付を表示
+    todayDisp.textContent = `本日：${now.getMonth()+1}/${now.getDate()}（${weekLabels[now.getDay()]}）`;
+    
+    grid.innerHTML = ''; 
 
-    // 現在の月の日付を計算
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const lastDate = new Date(year, month + 1, 0).getDate();
+    // 今日から14日間をループ
+    for (let i = 1; i <= 14; i++) {
+      const target = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      target.setDate(target.getDate() + i);
+      
+      const Y = target.getFullYear();
+      const M = target.getMonth() + 1;
+      const D = target.getDate();
+      const dayStr = `${Y}-${String(M).padStart(2,'0')}-${String(D).padStart(2,'0')}`;
+      const displayStr = `${M}/${D}(${weekLabels[target.getDay()]})`;
 
-    // グリッドをクリア（ラベル以外を削除）
-    const labels = grid.querySelectorAll('.day-label');
-    grid.innerHTML = '';
-    labels.forEach(l => grid.appendChild(l));
-
-    // 1. 月の開始日までの空白を追加
-    for (let i = 0; i < firstDay; i++) {
-      const spacer = document.createElement("div");
-      grid.appendChild(spacer);
-    }
-
-    // 2. 日付を追加
-    for (let d = 1; d <= lastDate; d++) {
       const cell = document.createElement("div");
       cell.className = "date-cell";
-      
-      const dateObj = new Date(year, month, d);
-      const dayOfWeek = weekLabels[dateObj.getDay()];
-      const dateString = `${month + 1}/${d}(${dayOfWeek})`;
 
-      cell.textContent = d;
+      let isDisabled = false;
+      let reason = "";
+
+      // --- 判定ロジック ---
       
-      // 土日や過去日を無効化するロジック（必要に応じて調整）
-      if (dateObj.getDay() === 0 || dateObj.getDay() === 6 || d < now.getDate()) {
-        cell.classList.add("disabled");
+      // 1. 土日チェック
+      if (target.getDay() === 0 || target.getDay() === 6) {
+        isDisabled = true;
+        reason = "休園日";
+      } 
+      // 2. 休日一覧（行事・休暇）チェック
+      else if (HOLIDAYS.includes(dayStr)) {
+        isDisabled = true;
+        reason = "園行事・協力日";
+      } 
+      // 3. 翌月10日解禁ルール（今日が10日未満なら、翌月の日付は出さない）
+      else if (now.getDate() < 10 && target.getMonth() !== now.getMonth()) {
+        isDisabled = true;
+        reason = "10日解禁";
+      } 
+      // 4. 前日15:30締切判定（明日がターゲットで、今日が15:30を過ぎている場合）
+      else if (i === 1 && (now.getHours() > 15 || (now.getHours() === 15 && now.getMinutes() >= 31))) {
+        isDisabled = true;
+        reason = "受付終了";
       }
-      
-      if (d === now.getDate()) cell.classList.add("today");
 
-      // クリック時の処理
-      cell.onclick = () => {
-        // セクションをまたいでも消えないよう、URLにデータを乗せる
-        const targetUrl = `${FORM_URL}?usp=pp_url&${ENTRY_ID}=${encodeURIComponent(dateString)}`;
-        window.location.href = targetUrl;
-      };
-
+      // --- HTML生成 ---
+      if (isDisabled) {
+        cell.classList.add("disabled");
+        cell.innerHTML = `${displayStr}<span class="reason-tag">${reason}</span>`;
+      } else {
+        cell.textContent = displayStr;
+        cell.onclick = () => {
+          // フォームへ日付を飛ばす
+          const dateParam = `${M}/${D}(${weekLabels[target.getDay()]})`;
+          const finalUrl = `${FORM_URL}?usp=pp_url&${ENTRY_ID}=${encodeURIComponent(dateParam)}`;
+          window.location.href = finalUrl;
+        };
+      }
       grid.appendChild(cell);
     }
   }
 
-  // ページ読み込み時に実行
-  window.onload = generateCalendar;
+  // ページロード時に実行
+  window.onload = generateDateList;
 </script>
-t>
+
 </body>
 </html>
