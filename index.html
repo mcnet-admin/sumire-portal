@@ -143,73 +143,70 @@
     </a>
   </div>
 
+
+
+  // --------
   <script>
-    // --- 設定：特定した entry ID と フォームURL ---
-    const ENTRY_ID = "entry.1684633535";
-    const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeGWZ6eMGoI0MWQUxt5dzeGJ4O2-j4zpXVnQf_JWXJnz-1U-Q/viewform";
+  // --- 基本設定 ---
+  const ENTRY_ID = "entry.1684633535";
+  const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeGWZ6eMGoI0MWQUxt5dzeGJ4O2-j4zpXVnQf_JWXJnz-1U-Q/viewform";
 
-    const weekLabels = ["日","月","火","水","木","金","土"];
-    const now = new Date();
+  const weekLabels = ["日","月","火","水","木","金","土"];
+  const now = new Date();
 
-    // 今日を表示
-    document.getElementById("today-display").textContent = 
-      `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}（${weekLabels[now.getDay()]}）`;
+  function generateCalendar() {
+    const grid = document.getElementById("calendar-grid");
+    if (!grid) return;
 
-    // カレンダー生成ロジック
-    function generateCalendar() {
-      const grid = document.getElementById("calendar-grid");
-      const monthLabel = document.getElementById("month-label");
+    // 現在の月の日付を計算
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+
+    // グリッドをクリア（ラベル以外を削除）
+    const labels = grid.querySelectorAll('.day-label');
+    grid.innerHTML = '';
+    labels.forEach(l => grid.appendChild(l));
+
+    // 1. 月の開始日までの空白を追加
+    for (let i = 0; i < firstDay; i++) {
+      const spacer = document.createElement("div");
+      grid.appendChild(spacer);
+    }
+
+    // 2. 日付を追加
+    for (let d = 1; d <= lastDate; d++) {
+      const cell = document.createElement("div");
+      cell.className = "date-cell";
       
-      const year = now.getFullYear();
-      const month = now.getMonth();
-      monthLabel.textContent = `${year}年 ${month + 1}月`;
+      const dateObj = new Date(year, month, d);
+      const dayOfWeek = weekLabels[dateObj.getDay()];
+      const dateString = `${month + 1}/${d}(${dayOfWeek})`;
 
-      const firstDay = new Date(year, month, 1).getDay();
-      const lastDate = new Date(year, month + 1, 0).getDate();
-
-      // 空白セル
-      for (let i = 0; i < firstDay; i++) {
-        const spacer = document.createElement("div");
-        grid.appendChild(spacer);
+      cell.textContent = d;
+      
+      // 土日や過去日を無効化するロジック（必要に応じて調整）
+      if (dateObj.getDay() === 0 || dateObj.getDay() === 6 || d < now.getDate()) {
+        cell.classList.add("disabled");
       }
+      
+      if (d === now.getDate()) cell.classList.add("today");
 
-      // 日付セル
-      for (let d = 1; d <= lastDate; d++) {
-        const cell = document.createElement("div");
-        cell.className = "date-cell";
-        
-        const dateObj = new Date(year, month, d);
-        const dayOfWeek = weekLabels[dateObj.getDay()];
-        const dateString = `${month + 1}/${d}(${dayOfWeek})`;
+      // クリック時の処理
+      cell.onclick = () => {
+        // セクションをまたいでも消えないよう、URLにデータを乗せる
+        const targetUrl = `${FORM_URL}?usp=pp_url&${ENTRY_ID}=${encodeURIComponent(dateString)}`;
+        window.location.href = targetUrl;
+      };
 
-        cell.textContent = d;
-        
-        // 土日や過去日はクリック不可にする（例）
-        if (dateObj.getDay() === 0 || dateObj.getDay() === 6 || dateObj.getDate() < now.getDate()) {
-          cell.classList.add("disabled");
-        }
-        
-        if (dateObj.getDate() === now.getDate()) cell.classList.add("today");
+      grid.appendChild(cell);
+    }
+  }
 
-        cell.onclick = () => {
-          const dateString = `${month + 1}/${date}(${week[dateObj.getDay()]})`;
-          const entryId = "entry.1684633535";
-  
-  // フォームのベースURL
-  const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSeGWZ6eMGoI0MWQUxt5dzeGJ4O2-j4zpXVnQf_JWXJnz-1U-Q/viewform";
-
-  // 【ポイント】パラメータを組み立て
-  // ?usp=pp_url : 事前入力モード
-  // &entry...  : 日付データ
-  // &continue=1 : セクションを維持して進むためのフラグ（環境により挙動が変わります）
-  const finalUrl = `${formUrl}?usp=pp_url&${entryId}=${encodeURIComponent(dateString)}`;
-
-  window.location.href = finalUrl;
-};
-
-
-
-    generateCalendar();
-  </script>
+  // ページ読み込み時に実行
+  window.onload = generateCalendar;
+</script>
+t>
 </body>
 </html>
