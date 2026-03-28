@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>すみれクラブ予約ポータル</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 90%;
+      max-width: 350px;
+    }
+    .date {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    .btn {
+      display: block;
+      padding: 15px;
+      border-radius: 10px;
+      text-decoration: none;
+      color: white;
+      font-weight: bold;
+      margin-top: 20px;
+      transition: 0.2s;
+    }
+
+    /* 紫基調（仮） */
+    .btn-purple {
+      background: #7e57c2;
+    }
+    .btn-purple:hover {
+      background: #6a45b0;
+    }
+
+    .btn-disabled {
+      background: #cccccc;
+      pointer-events: none;
+      color: #666;
+    }
+
+    hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h3>すみれクラブ予約ポータル</h3>
+
+    <div class="date" id="today"></div>
+
+    <hr>
+
+    <!-- 平日（紫）  --->
+    <a href="weekday.html" class="btn btn-purple">平日利用</a>
+ 
+    <!-- 長期休暇（準備中） -->
+    <a class="btn btn-disabled">長期休暇（準備中）</a>
+
+    <p style="font-size: 0.7em; color: #999; margin-top: 20px;">
+      ※2週間前から前日15:30まで予約可能
+    </p>
+  </div>
+
+  <script>
+    const week = ["日","月","火","水","木","金","土"];
+    const d = new Date();
+    const today = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}（${week[d.getDay()]}）`;
+    document.getElementById("today").textContent = today;
+  </script>
+
+</body>
+</html>
