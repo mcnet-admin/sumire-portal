@@ -1,0 +1,26 @@
+name: Daily Reservation Check
+
+on:
+  schedule:
+    # 毎日 15:31 (日本時間) = 世界標準時(UTC) 06:31
+    - cron: '31 6 * * *'
+  workflow_dispatch: # 手動で今すぐテストするためのボタンを表示
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas reportlab
+
+      - name: Run script
+        run: python send_list.py
