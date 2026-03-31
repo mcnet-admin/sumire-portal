@@ -52,6 +52,59 @@
         </select>
     </div>
 
+<div class="form-group">
+        <label>操作種別（いずれかを選択）</label>
+        <div class="mode-container">
+            <label class="mode-option">
+                <input type="radio" name="vacation_mode" value="新規" checked>
+                <span class="mode-label">新規予約</span>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="vacation_mode" value="変更">
+                <span class="mode-label">内容変更</span>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="vacation_mode" value="取消">
+                <span class="mode-label">予約取消</span>
+            </label>
+        </div>
+    </div>
+
+    <style>
+        /* 横並びレイアウトのスタイル */
+        .mode-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .mode-option {
+            flex: 1;
+            position: relative;
+            cursor: pointer;
+        }
+        .mode-option input {
+            display: none; /* 本物のラジオボタンは隠す */
+        }
+        .mode-label {
+            display: block;
+            padding: 12px 5px;
+            text-align: center;
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.2s;
+        }
+        /* 選択された時の色指定 */
+        .mode-option input:checked + .mode-label {
+            background: #fff3e0;
+            border-color: #ef6c00;
+            color: #ef6c00;
+        }
+    </style> 
+ 
     <div class="form-group">
         <label>利用希望日</label>
         <div id="date-error" class="error-text"></div>
@@ -60,6 +113,8 @@
 
     <button class="btn-submit" onclick="submitForm()">この内容で申し込む</button>
     <a href="index.html" class="btn-back">ポータル画面へ戻る</a>
+
+ 
 </div>
 
 <script>
@@ -188,6 +243,9 @@
 
         try {
             // 1. 現在のファイルを取得
+            // 1. 選択されたモードを取得
+            const modeVal = document.querySelector('input[name="vacation_mode"]:checked').value;
+
             const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 headers: { "Authorization": `token ${GITHUB_TOKEN}` },
                 cache: "no-store"
@@ -199,15 +257,18 @@
             const sha = fileData.sha;
             const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
 
-            // 2. 新しい予約データを作成
+        
+        
+            // 2. GitHubに送るデータを作成
             const newEntry = {
-                id: Date.now(),
-                type: "休暇版",
-                date: selectedDate,
-                class: classVal,
-                name: studentName,
-                timestamp: new Date().toLocaleString("ja-JP")
-            };
+            id: Date.now(),
+            type: "休暇版",
+            mode: modeVal, // ここで「新規/変更/取消」がJSONに入ります
+            date: selectedDate,
+            class: classVal,
+            name: studentName,
+            timestamp: new Date().toLocaleString("ja-JP")
+        };
 
             currentContent.push(newEntry);
 
