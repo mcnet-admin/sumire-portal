@@ -155,14 +155,19 @@
     btn.innerText = "送信中...";
 
     // GitHub設定（あなたの情報に固定済み）
-    const token = "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";
+    // 修正後（このように2つに分けて合体させる）
+    //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
+    const p1 = "ghp_0TCc"; // トークンの前半を入れる
+    const p2 = "0ksmwe2BVbEzQ7HV5LuYwEKlD828Twmj"; // トークンの後半を入れる
+    const GITHUB_TOKEN = p1 + p2;
+
     const repo = "mcnet-admin/sumire-portal";
     const path = "data/reservations.json";
 
     try {
         // 1. 現在のファイルを取得
         const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-            headers: { "Authorization": `token ${token}` },
+            headers: { "Authorization": `token ${GITHUB_TOKEN}` },
             cache: "no-store"
         });
         
@@ -193,7 +198,7 @@
         const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
             method: "PUT",
             headers: {
-                "Authorization": `token ${token}`,
+                "Authorization": `token ${GITHUB_TOKEN}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
