@@ -92,9 +92,9 @@
     // JSON読み込み
     async function init() {
         try {
-            const resS = await fetch('../output/students.json');
+            const resS = await fetch('output/students.json');
             masterData = await resS.json();
-            const resH = await fetch('../output/holidays.json');
+            const resH = await fetch('output/holidays.json');
             holidays = await resH.json();
 
             const classSel = document.getElementById('class-select');

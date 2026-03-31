@@ -69,8 +69,8 @@
     async function initForm() {
         try {
             const [resS, resH] = await Promise.all([
-                fetch('../output/students.json'),
-                fetch('../output/holidays.json')
+                fetch('output/students.json'),
+                fetch('output/holidays.json')
             ]);
             studentData = await resS.json();
             holidays = await resH.json();
