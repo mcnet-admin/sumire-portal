@@ -218,12 +218,16 @@
                     "Authorization": `token ${GITHUB_TOKEN}`,
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                    message: `予約(休暇版): ${studentName}`,
-                    content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))),
-                    sha: sha
+
+                
+            body: JSON.stringify({
+                message: `Reservation Update`, // メッセージを英語にして安全に
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))), // データを凝縮
+            sha: sha
                 })
+
             });
+
 
             if (updateRes.ok) {
                 alert("予約（休暇版）が正常に送信されました。");
