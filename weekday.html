@@ -1,111 +1,226 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>すみれクラブ予約カレンダー</title>
-  <style>
-    body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-    .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 90%; max-width: 400px; }
-    
-    /* モード別メッセージエリア */
-    .guide-box { margin: 15px 0; padding: 10px; border-radius: 10px; font-size: 0.9em; font-weight: bold; min-height: 3em; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
-    .guide-new { background: #e3f2fd; color: #1976d2; border: 1px solid #1976d2; }
-    .guide-change { background: #fff3e0; color: #ef6c00; border: 1px solid #ef6c00; }
-    .guide-cancel { background: #ffebee; color: #c62828; border: 1px solid #c62828; }
-
-    .mode-btn { display: inline-block; padding: 10px 18px; margin: 5px; border-radius: 8px; background: #eee; color: #666; font-weight: bold; cursor: pointer; border: none; }
-    .mode-btn.active { color: white; }
-    #mode-new.active { background: #1976d2; }
-    #mode-change.active { background: #ef6c00; }
-    #mode-cancel.active { background: #c62828; }
-
-    .btn { display: block; padding: 12px; border-radius: 10px; text-decoration: none; color: white; font-weight: bold; margin-top: 10px; transition: 0.2s; }
-    .btn-purple { background: #7e57c2; }
-    .btn-disabled { background: #cccccc; pointer-events: none; color: #666; }
-    .back { margin-top: 20px; display: inline-block; color: #6a45b0; text-decoration: none; font-size: 0.85em; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>すみれクラブ予約（平日版）</title>
+    <style>
+        /* スマホで見やすいシンプルなデザイン */
+        body { font-family: -apple-system, sans-serif; padding: 15px; background-color: #f8f9fa; }
+        .card { background: white; padding: 20px; border-radius: 10px; shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .item { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; color: #333; }
+        select, input, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        .btn-submit { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .note { font-size: 12px; color: #666; margin-top: 5px; }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <h3 style="margin-top:0; color:#444;">予約・変更・取消</h3>
+
+<div class="card">
+    <h2>すみれクラブ予約 <span style="font-size: 14px; color: #007bff;">[平日用]</span></h2>
     
-    <div style="margin-bottom:10px;">
-      <button class="mode-btn active" id="mode-new">新規予約</button>
-      <button class="mode-btn" id="mode-change">日時の変更</button>
-      <button class="mode-btn" id="mode-cancel">希望の取消</button>
-    </div>
+    <form id="reservation-form">
+        <div class="item">
+            <label>① クラス</label>
+            <select id="class-select" required>
+                <option value="">選択してください</option>
+            </select>
+        </div>
 
-    <div id="guide" class="guide-box guide-new">
-      【新規】予約したい日を選んでください
-    </div>
+        <div class="item">
+            <label>② 園児名</label>
+            <select id="name-select" required disabled>
+                <option value="">クラスを先に選択してください</option>
+            </select>
+        </div>
 
-    <div id="calendar"></div>
-    <a href="index.html" class="back">← ポータルに戻る</a>
-  </div>
+        <div class="item">
+            <label>③ モード</label>
+            <select id="mode-select">
+                <option value="新規">新規申込み</option>
+                <option value="変更">登録内容の変更</option>
+                <option value="取消">予約の取消</option>
+            </select>
+        </div>
 
-  <script>
-    const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSeGWZ6eMGoI0MWQUxt5dzeGJ4O2-j4zpXVnQf_JWXJnz-1U-Q/viewform";
-    const entryType = "entry.19338865"; // 利用内容
-    const entryDate = "entry.2032664883"; // 統合した日付入力欄ID（※最新を要確認）
+        <div class="item">
+            <label>④ 利用希望日</label>
+            <input type="date" id="date-select" required>
+            <p class="note">※前日15:30までに入力してください</p>
+        </div>
 
-    let currentMode = "new";
-    const week = ["日","月","火","水","木","金","土"];
-    const dObj = new Date();
+        <div class="item">
+            <label>⑤ 早朝預かり（7:30〜）</label>
+            <select id="early-time">
+                <option value="なし">利用しない</option>
+                <option value="あり">利用する</option>
+            </select>
+        </div>
 
-    // モード切り替え関数
-    function switchMode(mode) {
-      currentMode = mode;
-      const guide = document.getElementById("guide");
-      
-      // ボタンの見た目更新
-      document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
-      document.getElementById("mode-" + mode).classList.add("active");
+        <div class="item">
+            <label>⑥ 終了時間</label>
+            <select id="end-time">
+                <option value="15:00">15:00まで</option>
+                <option value="16:30">16:30まで</option>
+                <option value="18:00">18:00まで（時間外）</option>
+            </select>
+        </div>
 
-      // メッセージと色の更新
-      guide.className = "guide-box guide-" + mode;
-      if (mode === "cancel") {
-        guide.innerHTML = "【取消】お手元の受付メールを確認し、<br>取り消したい予約日を選んでください";
-      } else if (mode === "change") {
-        guide.innerHTML = "【変更】お手元のメールを確認の上、<br>新たに希望する日を選び直してください";
-      } else {
-        guide.innerHTML = "【新規】予約したい日を選んでください";
-      }
-      renderCalendar();
-    }
+        <div class="item">
+            <label>⑦ お迎えの方</label>
+            <select id="pickup">
+                <option value="母">母</option>
+                <option value="父">父</option>
+                <option value="その他">その他（備考欄に記入）</option>
+            </select>
+        </div>
 
-    document.getElementById("mode-new").onclick = () => switchMode("new");
-    document.getElementById("mode-change").onclick = () => switchMode("change");
-    document.getElementById("mode-cancel").onclick = () => switchMode("cancel");
+        <div class="item">
+            <label>⑧ 備考</label>
+            <textarea id="memo" rows="3" placeholder="お迎えがその他の場合や、連絡事項があれば記入してください"></textarea>
+        </div>
 
-    function renderCalendar() {
-      const container = document.getElementById("calendar");
-      container.innerHTML = "";
-      for (let i = 0; i < 14; i++) {
-        const d = new Date();
-        d.setDate(dObj.getDate() + i);
-        const label = `${d.getMonth()+1}/${d.getDate()}（${week[d.getDay()]}）`;
+        <button type="button" class="btn-submit" onclick="handleConfirm()">内容を確認して送信</button>
+    </form>
+</div>
 
-        if (d.getDay() === 0 || d.getDay() === 6) {
-          const div = document.createElement("div");
-          div.className = "btn btn-disabled";
-          div.textContent = label + " (利用不可)";
-          container.appendChild(div);
-        } else {
-          const btn = document.createElement("a");
-          btn.className = "btn btn-purple";
-          btn.textContent = label;
-          
-          let typeValue = currentMode === "cancel" ? "希望の取消" : (currentMode === "change" ? "日時の変更" : "新規");
+<script>
+    let masterData = {};
+    let holidays = [];
 
-          const params = new URLSearchParams();
-          params.append(entryType, typeValue);
-          params.append(entryDate, label);
-          btn.href = `${formURL}?${params.toString()}`;
-          container.appendChild(btn);
+    // JSON読み込み
+    async function init() {
+        try {
+            const resS = await fetch('../output/students.json');
+            masterData = await resS.json();
+            const resH = await fetch('../output/holidays.json');
+            holidays = await resH.json();
+
+            const classSel = document.getElementById('class-select');
+            Object.keys(masterData).forEach(cls => {
+                const opt = new Option(cls, cls);
+                classSel.add(opt);
+            });
+        } catch (e) {
+            alert("名簿データの読み込みに失敗しました。管理者に連絡してください。");
         }
-      }
     }
-    renderCalendar();
-  </script>
+
+    // クラス連動
+    document.getElementById('class-select').onchange = function() {
+        const nameSel = document.getElementById('name-select');
+        nameSel.innerHTML = '<option value="">選択してください</option>';
+        const list = masterData[this.value] || [];
+        list.forEach(s => {
+            nameSel.add(new Option(s.name, s.id)); // valueにID、表示に名前
+        });
+        nameSel.disabled = list.length === 0;
+    };
+    
+// 確認と送信のメイン処理
+    async function handleConfirm() {
+    // フォームデータの取得
+    const classVal = document.getElementById('class-select').value;
+    const nameSel = document.getElementById('name-select');
+    const nameText = nameSel.options[nameSel.selectedIndex]?.text;
+    const mode = document.getElementById('mode-select').value;
+    const date = document.getElementById('date-select').value;
+    const early = document.getElementById('early-time').value;
+    const endTime = document.getElementById('end-time').value;
+    const pickup = document.getElementById('pickup').value;
+    const memo = document.getElementById('memo').value;
+
+    // 未入力チェック
+    if (!classVal || !nameSel.value || !date) {
+        alert("クラス、名前、利用日を正しく選択してください。");
+        return;
+    }
+
+    // 休日判定（既存ロジック）
+    if (holidays.includes(date)) {
+        alert("選択された日は休日（休暇期間）です。休暇版フォームから入力してください。");
+        return;
+    }
+
+    // 送信確認
+    if (!confirm(`${date} の予約を「${mode}」で送信してよろしいですか？`)) {
+        return;
+    }
+
+    // --- ここからGitHub送信ロジック ---
+    const btn = document.querySelector('.btn-submit');
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "送信中...";
+
+    // GitHub設定（あなたの情報に固定済み）
+    const token = "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";
+    const repo = "mcnet-admin/sumire-portal";
+    const path = "data/reservations.json";
+
+    try {
+        // 1. 現在のファイルを取得
+        const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+            headers: { "Authorization": `token ${token}` },
+            cache: "no-store"
+        });
+        
+        if (!res.ok) throw new Error("データの取得に失敗しました");
+        
+        const fileData = await res.json();
+        const sha = fileData.sha;
+        const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+
+        // 2. 新しい予約オブジェクトを作成
+        const newEntry = {
+            id: Date.now(),
+            type: "平日版",
+            mode: mode,
+            date: date,
+            class: classVal,
+            name: nameText,
+            early_care: early,
+            end_time: endTime,
+            pickup: pickup,
+            memo: memo,
+            timestamp: new Date().toLocaleString("ja-JP")
+        };
+
+        currentContent.push(newEntry);
+
+        // 3. GitHubへ上書き保存
+        const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+            method: "PUT",
+            headers: {
+                "Authorization": `token ${token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                message: `予約(${mode}): ${nameText}`,
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent, null, 2)))),
+                sha: sha
+            })
+        });
+
+        if (updateRes.ok) {
+            alert("予約が正常に送信されました。");
+            location.reload(); // フォームをリセット
+        } else {
+            throw new Error("GitHubへの保存に失敗しました");
+        }
+
+    } catch (e) {
+        console.error(e);
+        alert("【エラー】送信できませんでした。通信環境を確認してください。");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
+}
+
+    init();
+</script>
+
 </body>
 </html>
