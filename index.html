@@ -84,7 +84,7 @@
         document.getElementById('today-date').innerText = `本日：${y}年${m}月${d}日`;
 
         try {
-            const res = await fetch('../output/holidays.json');
+            const res = await fetch('output/holidays.json');
             const holidays = await res.json();
             
             const statusArea = document.getElementById('status-area');
