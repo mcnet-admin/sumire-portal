@@ -89,7 +89,7 @@
     let masterData = {};
     let holidays = [];
 
-    // JSON読み込み
+    // 1. JSON読み込み（初期化）
     async function init() {
         try {
             const resS = await fetch('output/students.json');
@@ -107,126 +107,131 @@
         }
     }
 
-    // クラス連動
+    // 2. クラス選択に連動して園児名を更新
     document.getElementById('class-select').onchange = function() {
         const nameSel = document.getElementById('name-select');
         nameSel.innerHTML = '<option value="">選択してください</option>';
         const list = masterData[this.value] || [];
         list.forEach(s => {
-            nameSel.add(new Option(s.name, s.id)); // valueにID、表示に名前
+            // 重要：valueにstudent_id、表示に名前をセット
+            nameSel.add(new Option(s.name, s.id)); 
         });
         nameSel.disabled = list.length === 0;
     };
     
-// 確認と送信のメイン処理
+    // 3. 確認と送信のメイン処理
     async function handleConfirm() {
-    // フォームデータの取得
-    const classVal = document.getElementById('class-select').value;
-    const nameSel = document.getElementById('name-select');
-    const nameText = nameSel.options[nameSel.selectedIndex]?.text;
-    const mode = document.getElementById('mode-select').value;
-    const date = document.getElementById('date-select').value;
-    const early = document.getElementById('early-time').value;
-    const endTime = document.getElementById('end-time').value;
-    const pickup = document.getElementById('pickup').value;
-    const memo = document.getElementById('memo').value;
+        // フォームデータの取得
+        const classVal = document.getElementById('class-select').value;
+        const nameSel = document.getElementById('name-select');
+        const selectedId = nameSel.value; // IDを取得
+        const nameText = nameSel.options[nameSel.selectedIndex]?.text;
+        const mode = document.getElementById('mode-select').value;
+        const date = document.getElementById('date-select').value;
+        const early = document.getElementById('early-time').value;
+        const endTime = document.getElementById('end-time').value;
+        const pickup = document.getElementById('pickup').value;
+        const memo = document.getElementById('memo').value;
 
-    // 未入力チェック
-    if (!classVal || !nameSel.value || !date) {
-        alert("クラス、名前、利用日を正しく選択してください。");
-        return;
-    }
-
-    // 休日判定（既存ロジック）
-    if (holidays.includes(date)) {
-        alert("選択された日は休日（休暇期間）です。休暇版フォームから入力してください。");
-        return;
-    }
-
-    // 送信確認
-    if (!confirm(`${date} の予約を「${mode}」で送信してよろしいですか？`)) {
-        return;
-    }
-
-    // --- ここからGitHub送信ロジック ---
-    const btn = document.querySelector('.btn-submit');
-    const originalText = btn.innerText;
-    btn.disabled = true;
-    btn.innerText = "送信中...";
-
-    // GitHub設定（あなたの情報に固定済み）
-    // 修正後（このように2つに分けて合体させる）
-    const p1 = "ghp_"; // トークンの前半を入れる
-    const p2 = "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS"; // トークンの後半を入れる
-    const GITHUB_TOKEN = p1 + p2;
-
-    const repo = "mcnet-admin/sumire-portal";
-    const path = "data/reservations.json";
-
-    try {
-        // 1. 現在のファイルを取得
-        const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-            headers: { "Authorization": `token ${GITHUB_TOKEN}` },
-            cache: "no-store"
-        });
-        
-        if (!res.ok) throw new Error("データの取得に失敗しました");
-        
-        const fileData = await res.json();
-        const sha = fileData.sha;
-        const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
-
-        // 2. 新しい予約オブジェクトを作成
-        const newEntry = {
-            id: Date.now(),
-            type: "平日版",
-            mode: mode,
-            date: date,
-            class: classVal,
-            name: nameText,
-            early_care: early,
-            end_time: endTime,
-            pickup: pickup,
-            memo: memo,
-            timestamp: new Date().toLocaleString("ja-JP")
-        };
-
-        currentContent.push(newEntry);
-
-        // 3. GitHubへ上書き保存
-        const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-            method: "PUT",
-            headers: {
-                "Authorization": `token ${GITHUB_TOKEN}`,
-                "Content-Type": "application/json",
-            },
-
-            body: JSON.stringify({
-                message: `Reservation Update`, // メッセージを英語にして安全に
-                content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))), // データを凝縮
-            sha: sha
-            })
-
-        });
-
-        if (updateRes.ok) {
-            alert("予約が正常に送信されました。");
-            location.reload(); // フォームをリセット
-        } else {
-            throw new Error("GitHubへの保存に失敗しました");
+        // 未入力チェック
+        if (!classVal || !selectedId || !date) {
+            alert("クラス、名前、利用日を正しく選択してください。");
+            return;
         }
 
-    } catch (e) {
-        console.error(e);
-        alert("【エラー】送信できませんでした。通信環境を確認してください。");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = originalText;
+        // 名簿データから保護者メールアドレスを特定
+        const studentsInClass = masterData[classVal] || [];
+        const studentInfo = studentsInClass.find(s => s.id === selectedId);
+        const email01 = studentInfo ? studentInfo.parent_email01 : "";
+        const email02 = studentInfo ? studentInfo.parent_email02 : "";
+
+        // 休日判定
+        if (holidays.includes(date)) {
+            alert("選択された日は休日（休暇期間）です。休暇版フォームから入力してください。");
+            return;
+        }
+
+        // 送信確認
+        if (!confirm(`${date} の予約を「${mode}」で送信してよろしいですか？`)) {
+            return;
+        }
+
+        // 送信ボタンの制御
+        const btn = document.querySelector('.btn-submit');
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "送信中...";
+
+        // GitHub設定
+        const p1 = "ghp_";
+        const p2 = "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS"; 
+        const GITHUB_TOKEN = p1 + p2;
+        const repo = "mcnet-admin/sumire-portal";
+        const path = "data/reservations.json";
+
+        try {
+            // 1. 現在のファイルを取得
+            const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                headers: { "Authorization": `token ${GITHUB_TOKEN}` },
+                cache: "no-store"
+            });
+            
+            if (!res.ok) throw new Error("データの取得に失敗しました");
+            
+            const fileData = await res.json();
+            const sha = fileData.sha;
+            const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+
+            // 2. 新しい予約オブジェクトを作成（メールアドレスを含める）
+            const newEntry = {
+                id: Date.now(),
+                type: "平日版",
+                mode: mode,
+                date: date,
+                class: classVal,
+                name: nameText,
+                parent_email01: email01, // 追加
+                parent_email02: email02, // 追加
+                early_care: early,
+                end_time: endTime,
+                pickup: pickup,
+                memo: memo,
+                timestamp: new Date().toLocaleString("ja-JP")
+            };
+
+            currentContent.push(newEntry);
+
+            // 3. GitHubへ保存
+            const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${GITHUB_TOKEN}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    message: `Reservation Update: ${nameText}`,
+                    content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))),
+                    sha: sha
+                })
+            });
+
+            if (updateRes.ok) {
+                alert("予約が正常に送信されました。");
+                location.reload();
+            } else {
+                throw new Error("GitHubへの保存に失敗しました");
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert("【エラー】送信できませんでした。通信環境を確認してください。");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
     }
-}
 
     init();
 </script>
-
 </body>
 </html>
