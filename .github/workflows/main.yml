@@ -1,0 +1,24 @@
+name: Send Confirmation Email
+
+on:
+  push:
+    paths:
+      - 'data/reservations.json'  # JSONが更新された時だけ起動
+
+jobs:
+  send-mail:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Run email script
+        env:
+          MAIL_ADDRESS: ${{ secrets.MAIL_ADDRESS }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+        run: python scripts/send_confirmation.py
