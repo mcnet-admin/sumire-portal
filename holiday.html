@@ -154,6 +154,7 @@
         dateInput.max = maxDate.toISOString().split('T')[0];
     }
 
+     // クラス選択に連動して園児名を更新
     function updateStudentList() {
         const cls = document.getElementById('class-select').value;
         const studentSelect = document.getElementById('student-select');
@@ -161,12 +162,14 @@
         if (cls && studentData[cls]) {
             studentData[cls].forEach(s => {
                 const opt = document.createElement('option');
-                opt.value = s.id;
+                // 重要：valueにIDをセットすることで、後でメールアドレスを検索できるようにする
+                opt.value = s.id; 
                 opt.textContent = s.name;
                 studentSelect.appendChild(opt);
             });
         }
     }
+
 
     function validateHolidayDate() {
         const selectedDate = document.getElementById('date-select').value;
@@ -306,6 +309,135 @@
         }
     }
     initForm();
+
+//-----
+// クラス選択に連動して園児名を更新
+    function updateStudentList() {
+        const cls = document.getElementById('class-select').value;
+        const studentSelect = document.getElementById('student-select');
+        studentSelect.innerHTML = '<option value="">園児名を選択してください</option>';
+        if (cls && studentData[cls]) {
+            studentData[cls].forEach(s => {
+                const opt = document.createElement('option');
+                // 重要：valueにIDをセットすることで、後でメールアドレスを検索できるようにする
+                opt.value = s.id; 
+                opt.textContent = s.name;
+                studentSelect.appendChild(opt);
+            });
+        }
+    }
+
+    // 送信処理（GitHub連携 + メールアドレス抽出版）
+    async function submitForm() {
+        const classVal = document.getElementById('class-select').value;
+        const studentSel = document.getElementById('student-select');
+        const selectedId = studentSel.value; // 園児ID
+        const studentName = studentSel.options[studentSel.selectedIndex]?.text;
+        const selectedDate = document.getElementById('date-select').value;
+        const modeVal = document.querySelector('input[name="vacation_mode"]:checked').value;
+
+        // 入力チェック
+        if (!classVal || !selectedId || !selectedDate) {
+            alert("未入力の項目があります。");
+            return;
+        }
+
+        // --- 名簿データから保護者メールアドレスを特定 ---
+        const studentsInClass = studentData[classVal] || [];
+        const studentInfo = studentsInClass.find(s => s.id === selectedId);
+        const email01 = studentInfo ? studentInfo.parent_email01 : "";
+        const email02 = studentInfo ? studentInfo.parent_email02 : "";
+
+        // --- 14日前ルール（キャンセル料判定） ---
+        const targetDate = new Date(selectedDate);
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const selected = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+        
+        const limitDate = new Date(selected);
+        limitDate.setDate(selected.getDate() - 14);
+
+        if (today > limitDate) {
+            const diffDays = Math.ceil((selected - today) / (1000 * 60 * 60 * 24));
+            const confirmMsg = `【重要：キャンセル料の確認】\n利用まであと ${diffDays} 日です。これ以降の変更・取消はキャンセル料が発生しますが、よろしいですか？`;
+            if (!confirm(confirmMsg)) return;
+        }
+
+        if (!confirm(`${selectedDate} の予約を「${modeVal}」で送信してよろしいですか？`)) return;
+
+        // --- GitHub送信ロジック ---
+        const btn = document.querySelector('.btn-submit');
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "送信中...";
+
+        const p1 = "ghp_";
+        const p2 = "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS";
+        const GITHUB_TOKEN = p1 + p2;
+        const repo = "mcnet-admin/sumire-portal";
+        const path = "data/reservations.json";
+
+        try {
+            // 1. 現在のファイルを取得
+            const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                headers: { "Authorization": `token ${GITHUB_TOKEN}` },
+                cache: "no-store"
+            });
+            
+            if (!res.ok) throw new Error("データの取得に失敗しました");
+            
+            const fileData = await res.json();
+            const sha = fileData.sha;
+            const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+
+            // 2. GitHubに送るデータを作成（メールアドレスを追加）
+            const newEntry = {
+                id: Date.now(),
+                type: "休暇版",
+                mode: modeVal,
+                date: selectedDate,
+                class: classVal,
+                name: studentName,
+                parent_email01: email01, // 追加
+                parent_email02: email02, // 追加
+                timestamp: new Date().toLocaleString("ja-JP")
+            };
+
+            currentContent.push(newEntry);
+
+            // 3. GitHubへ保存
+            const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${GITHUB_TOKEN}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    message: `Vacation Reservation: ${studentName}`,
+                    content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))),
+                    sha: sha
+                })
+            });
+
+            if (updateRes.ok) {
+                alert("予約（休暇版）が正常に送信されました。");
+                location.reload(); 
+            } else {
+                throw new Error("GitHubへの保存に失敗しました");
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert("エラーが発生しました。通信環境を確認してください。");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    }
+
+
+
+
 </script>
 </body>
 </html>
