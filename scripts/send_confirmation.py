@@ -5,23 +5,34 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 def send_email():
+    # --- 【直接書き換え設定】 ---
+    # 送信元のGmailアドレス
+    SENDER_EMAIL = "mcnet-admin@mclean.ed.jp"
+    # 先ほど発行した16桁のアプリパスワード（スペースはあってもなくてもOK）
+    SENDER_PASS = "bayu gwmz lvcg vffv"
+    # --------------------------
+
     # 1. データの読み込み
     json_path = 'data/reservations.json'
     if not os.path.exists(json_path):
+        print("JSONファイルが見つかりません")
         return
 
-    with open(json_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"JSON読み込みエラー: {e}")
+        return
 
     if not data:
+        print("データが空です")
         return
 
     # 最新の1件を取得
     latest = data[-1]
     
-    # 宛先設定（実際は保護者のメアドをJSONに含める必要がありますが、
-    # 現状はテストとして管理者宛、または固定のアドレスに送る設定にします）
-    # ※HTML側にメアド入力欄を追加した後は latest.get('email') で取得可能
+    # 宛先設定
     to_email = "mcnet-admin@mclean.ed.jp" 
 
     # 2. モードに応じて文面を切り替え
@@ -47,15 +58,16 @@ def send_email():
 
     # 3. メール送信処理
     msg = MIMEMultipart()
-    msg['From'] = os.environ.get('MAIL_ADDRESS')
+    msg['From'] = SENDER_EMAIL
     msg['To'] = to_email
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
 
     try:
+        print(f"送信開始: {SENDER_EMAIL} から {to_email} へ")
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(os.environ.get('MAIL_ADDRESS'), os.environ.get('MAIL_PASSWORD'))
+        server.login(SENDER_EMAIL, SENDER_PASS)
         server.send_message(msg)
         server.quit()
         print(f"メール送信成功: {mode}")
