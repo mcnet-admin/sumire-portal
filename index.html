@@ -1,239 +1,118 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>すみれクラブ 予約ポータル</title>
-  <style>
-    :root { --main: #7e57c2; --bg: #f0f2f5; --accent: #ff7043; }
-    body { font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 15px; margin: 0; }
-    .card { background: white; padding: 20px; border-radius: 15px; width: 100%; max-width: 560px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
-    h3 { color: var(--main); text-align: center; margin-top: 0; border-bottom: 2px solid var(--main); padding-bottom: 10px; }
-    .section-title { font-size: 0.9em; color: var(--main); margin: 16px 0 10px; font-weight: 700; border-left: 4px solid var(--main); padding-left: 10px; }
-    .form-group { margin-bottom: 12px; }
-    label { font-size: 0.9em; font-weight: 700; color: #333; display: block; margin-bottom: 6px; }
-    select, input, textarea { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #dcdcdc; font-size: 15px; box-sizing: border-box; background: #fff; }
-    textarea { resize: vertical; min-height: 56px; }
-    .mode-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-    .mode-btn { padding: 10px; border: 2px solid #eee; border-radius: 10px; cursor: pointer; font-weight: 700; text-align: center; background: #fff; font-size: 0.95em; }
-    .mode-btn.active { border-color: var(--main); background: #f6f0ff; color: var(--main); }
-    .mode-btn.cancel-mode.active { border-color: var(--accent); background: #fff3f0; color: var(--accent); }
-    .calendar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
-    .date-btn { padding: 12px 8px; border-radius: 8px; border: 1px solid #e6e6e6; background: #fff; cursor: pointer; font-weight: 700; text-align: center; font-size: 0.95em; }
-    .date-btn.selected { border-color: var(--main); background: #f6f0ff; color: var(--main); border-width: 2px; }
-    .date-btn.disabled { background: #f2f2f2; color: #9a9a9a; cursor: not-allowed; border-color: #e0e0e0; }
-    .submit-btn { width: 100%; padding: 16px; background: var(--main); color: white; border: none; border-radius: 12px; font-size: 1.05em; font-weight: 800; cursor: pointer; margin-top: 18px; }
-    .submit-btn:disabled { background: #cfcfcf; cursor: not-allowed; }
-    .note { font-size: 0.85em; color: #666; margin-top: 10px; text-align: center; }
-    .small { font-size: 0.82em; color: #666; }
-    .hidden { display: none; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>すみれクラブ 予約ポータル</title>
+    <style>
+        /* スマホ向けレスポンシブデザイン */
+        body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 20px; background: #f4f7f9; color: #333; line-height: 1.6; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; }
+        h1 { font-size: 22px; margin-bottom: 10px; color: #2c3e50; }
+        .date-display { font-size: 16px; color: #7f8c8d; margin-bottom: 25px; }
+        
+        /* 状態表示バッジ */
+        .status-card { 
+            padding: 15px; 
+            border-radius: 12px; 
+            margin-bottom: 25px; 
+            font-weight: bold; 
+            font-size: 18px; 
+            text-align: center; /* 判定テキストを中央揃え */
+        }
+        .is-normal { background: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb; }
+        .is-holiday { background: #fff3e0; color: #ef6c00; border: 1px solid #ffe0b2; }
+
+        /* 大きなボタン */
+        .btn { 
+            display: block; 
+            width: 100%;
+            padding: 22px 0;
+            margin: 15px 0;
+            border: none; 
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            text-decoration: none;
+            text-align: center; /* ボタンテキストを中央揃え */
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-sizing: border-box; 
+        }
+
+        .btn:active { transform: scale(0.98); }
+        
+        .btn-weekday { background: #007bff; color: white; box-shadow: 0 4px 15px rgba(0,123,255,0.3); }
+        .btn-holiday { background: #ff9800; color: white; box-shadow: 0 4px 15px rgba(255,152,0,0.3); }
+        
+        /* 完全に無効化するスタイル */
+        .btn-disabled {
+            background-color: #d1d5db !important; /* グレー */
+            color: #9ca3af !important;
+            box-shadow: none !important;
+            pointer-events: none; /* クリック不可 */
+            transform: none !important;
+            opacity: 0.6;
+        }
+        
+        .deadline-warning { background: #fee; color: #d32f2f; padding: 10px; border-radius: 8px; font-size: 14px; margin-top: 20px; border: 1px solid #ffcdd2; display: none; }
+    </style>
 </head>
 <body>
-  <div class="card" role="main" aria-labelledby="portal-title">
-    <h3 id="portal-title">すみれクラブ 予約ポータル</h3>
 
-    <div class="section-title">1. 基本情報</div>
-    <div class="form-group">
-      <label for="class-select">クラス</label>
-      <select id="class-select" onchange="updateStudents()"><option value="">選択してください</option></select>
+<div class="container">
+    <h1>すみれクラブ 予約ポータル</h1>
+    <div id="today-date" class="date-display"></div>
+    
+    <div id="status-area" class="status-card">判定中...</div>
+
+    <a href="weekday.html" id="btn-w" class="btn btn-weekday">平日版 予約フォームへ</a>
+    <a href="holiday.html" id="btn-h" class="btn btn-holiday">休暇版 予約フォームへ</a>
+
+    <div id="deadline-msg" class="deadline-warning">
+        ⚠️ 本日の受付（明日の予約・変更）は15:30で終了しました。緊急の連絡は園までお電話ください。
     </div>
-    <div class="form-group">
-      <label for="student-select">園児名</label>
-      <select id="student-select" onchange="validate()" disabled><option value="">先にクラスを選んでください</option></select>
-    </div>
+</div>
 
-    <div class="section-title">2. 申請内容</div>
-    <div class="mode-selector" role="tablist" aria-label="申請モード">
-      <div class="mode-btn active" id="mode-new" onclick="setMode('新規')" role="tab" aria-selected="true">新規</div>
-      <div class="mode-btn" id="mode-change" onclick="setMode('日時の変更')" role="tab" aria-selected="false">変更</div>
-      <div class="mode-btn" id="mode-cancel" onclick="setMode('取消')" role="tab" aria-selected="false">取消</div>
-    </div>
-
-    <div id="details-area">
-      <div class="form-group">
-        <label for="exit-time">預かり終了時間</label>
-        <select id="exit-time">
-          <option value="-15:00">15:00まで</option>
-          <option value="-15:30">15:30まで</option>
-          <option value="-16:00">16:00まで</option>
-          <option value="-16:30">16:30まで</option>
-          <option value="-17:00">17:00まで</option>
-          <option value="-17:30">17:30まで</option>
-          <option value="-18:00">18:00まで</option>
-          <option value="-18:30">18:30まで</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="pickup-person">お迎えの方</label>
-        <select id="pickup-person">
-          <option value="母">母</option><option value="父">父</option>
-          <option value="祖母">祖母</option><option value="祖父">祖父</option>
-          <option value="その他">その他</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label for="memo">備考</label>
-      <textarea id="memo" rows="2" placeholder="特記事項があれば記入"></textarea>
-    </div>
-
-    <div class="section-title">3. 希望日</div>
-    <div id="calendar-grid" class="calendar-grid" aria-live="polite"></div>
-    <div class="note small">※2週間先まで表示・15:30締切</div>
-
-    <button id="submit-btn" class="submit-btn" disabled>予約を確定する</button>
-  </div>
-
-  <!-- 非表示のフォーム（Google Forms へ POST） -->
- <form id="hidden-form" class="hidden" action="https://docs.google.com/forms/d/e/1FAIpQLSeGWZ6eMGoI0MWQUxt5dzeGJ4O2-j4zpXVnQf_JWXJnz-1U-Q/formResponse" method="POST" target="_blank" aria-hidden="true">
-    <input type="hidden" name="entry.235597287" id="f-class"> 
-    <input type="hidden" name="entry.1706175973" id="f-name">   
-    <input type="hidden" name="entry.1444161986" id="f-date">   
-    <input type="hidden" name="entry.1643916909" id="f-mode">   
-    <input type="hidden" name="entry.1158580040" id="f-time">   
-    <input type="hidden" name="entry.1742918820" id="f-pickup"> 
-    <input type="hidden" name="entry.1506990494" id="f-memo">
-  </form>
-
-  <script>
-    // テスト時はここを書き換えるだけでOK
-    const now = new Date("2026-03-30T09:00:00"); 
-    const currentDay = now.getDate();
-    const currentHour = now.getHours();
-    const currentMin = now.getMinutes();
-
-    // ----- データ（年度更新時に差し替え） -----
-    const studentData = {"TP1":["井関　日向子","川島　光葵","倉部　晴雪","小菅　佳子","近藤　碧","杉山　あかり","中島　ちよ","南端　陽葵","森田　香乃","渡辺　千明"],"HY1":["足立　春馬","池田　結菜","上原　紬","大西　結心","金城　凪沙","佐藤　健太","高橋　澪","中野　壮真","三浦　理央"],"HY2":["阿部　奏汰","石川　美結","小林　蓮","佐々木　ひかり","田中　陽太","西村　芽依","長谷川　湊","前田　結衣","山崎　陸"],"KT1":["伊藤　千歳","岡田　真奈","加藤　蓮","清水　葵","鈴木　大智","中村　美波","林　結月","藤田　颯太","吉田　湊"],"KT2":["井上　瑞希","大塚　陽向","木下　凛","斉藤　結愛","田村　海斗","野村　真由","村上　健斗","山口　芽依","渡辺　碧"],"HK1":["遠藤　美桜","加藤　大輝","工藤　結衣","佐野　湊","竹内　真彩","原田　拓海","松本　光希","横山　葵","和田　蒼空"],"HK2":["石田　大和","小野　結菜","河野　陽葵","酒井　湊","竹原　葵生","中島　寿来","西村　奎人","橋本　結月","森　健太"]};
-    const HOLIDAYS = ["2026-03-31", "2026-04-01", "2026-04-08", "2026-04-13"];
-    const weeks = ["日","月","火","水","木","金","土"];
-
-    // ----- 状態 -----
-    let currentMode = "新規";
-    let selectedDate = "";
-  
-    // ----- 初期化 UI ----
-    const clsSel = document.getElementById("class-select");
-    const sSel = document.getElementById("student-select");
-    const grid = document.getElementById("calendar-grid");
-    const submitBtn = document.getElementById("submit-btn");
-
-    Object.keys(studentData).forEach(c => clsSel.add(new Option(c, c)));
-
-    function updateStudents() {
-      sSel.innerHTML = '<option value="">園児名を選択</option>';
-      if (clsSel.value && studentData[clsSel.value]) {
-        studentData[clsSel.value].forEach(n => sSel.add(new Option(n, n)));
-        sSel.disabled = false;
-      } else {
-        sSel.disabled = true;
-      }
-      validate();
-    }
-
-    function setMode(mode) {
-      currentMode = mode;
-      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-      if (mode === '新規') document.getElementById('mode-new').classList.add('active');
-      if (mode === '日時の変更') document.getElementById('mode-change').classList.add('active');
-      if (mode === '取消') document.getElementById('mode-cancel').classList.add('active');
-      document.getElementById("details-area").classList.toggle("hidden", mode === "取消");
-      validate();
-    }
-
-   // カレンダー（2週間分）
-
-    // カレンダー（テスト用に今日から表示し、土日以外は選べるように変更）
-    // カレンダー生成（PDFのルールを適用）
-    function generateCalendar() {
-      grid.innerHTML = ""; // 一旦クリア
-    //  const now = new Date("2026-04-09T15:31:00"); // テスト用に日時を固定      
-    //  const now = new Date();
-      const currentDay = now.getDate();
-      const currentHour = now.getHours();
-      const currentMin = now.getMinutes();
-
-      // 【ルール1】表示月の判定 (10日を境に翌月分へ)
-      let displayMonth = now.getMonth(); 
-      if (currentDay >= 10) {
-          displayMonth += 1; 
-      }
-      
-      const startDate = new Date(now.getFullYear(), displayMonth, 1);
-      const endDate = new Date(now.getFullYear(), displayMonth + 1, 0);
-
-      // 1日から末日までループ
-      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        const iso = d.toLocaleDateString('sv-SE');
-        const lbl = `${d.getMonth()+1}/${d.getDate()}(${weeks[d.getDay()]})`;
-        const btn = document.createElement("div");
-        btn.className = "date-btn";
-        btn.textContent = lbl;
-
-        // 【ルール2】選択不可の判定
-        const isPast = d < new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const isToday = iso === now.toLocaleDateString('sv-SE');
-        const isHoliday = d.getDay() === 0 || d.getDay() === 6 || HOLIDAYS.includes(iso);
+<script>
+    async function initPortal() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth() + 1;
+        const d = now.getDate();
+        const todayStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         
-        // 【ルール3】前日15:30締切判定
-        const isTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toLocaleDateString('sv-SE') === iso;
-        let isTimeOver = false;
-        if (isTomorrow && (currentHour > 15 || (currentHour === 15 && currentMin >= 30))) {
-            isTimeOver = true;
+        document.getElementById('today-date').innerText = `本日：${y}年${m}月${d}日`;
+
+        try {
+            const res = await fetch('../output/holidays.json');
+            const holidays = await res.json();
+            
+            const statusArea = document.getElementById('status-area');
+            const btnW = document.getElementById('btn-w');
+            const btnH = document.getElementById('btn-h');
+
+            if (holidays.includes(todayStr)) {
+                statusArea.innerText = "🌸 現在は【休暇期間】です";
+                statusArea.className = "status-card is-holiday";
+                btnW.classList.add('btn-disabled');
+            } else {
+                statusArea.innerText = "🏫 現在は【平日期間】です";
+                statusArea.className = "status-card is-normal";
+                btnH.classList.add('btn-disabled');
+            }
+            
+            const deadline = new Date();
+            deadline.setHours(15, 30, 0);
+            if (now > deadline) {
+                document.getElementById('deadline-msg').style.display = "block";
+            }
+
+        } catch (e) {
+            console.error("データの読み込みに失敗しました", e);
+            document.getElementById('status-area').innerText = "データ読み込みエラー";
         }
-
-        if (isPast || isToday || isHoliday || isTimeOver) {
-          btn.classList.add("disabled");
-          btn.setAttribute('aria-disabled','true');
-        } else {
-          btn.onclick = () => selectDate(btn, lbl);
-          btn.onkeypress = (e) => { if (e.key === 'Enter' || e.key === ' ') selectDate(btn, lbl); };
-        }
-        grid.appendChild(btn);
-      }
     }
-
-    // 【ルール4】9日 15:30 最終締切判定
-    if (currentDay === 9 && (currentHour > 15 || (currentHour === 15 && currentMin >= 30))) {
-        document.querySelector(".card").innerHTML = "<h3>受付期間外</h3><p style='text-align:center;'>翌月分の申請は10日からとなります。</p>";
-    } else {
-        generateCalendar();
-    }
-
-    function selectDate(btn, lbl) {
-      document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      selectedDate = lbl;
-      validate();
-    }
-
-    function validate() {
-      const ok = clsSel.value && sSel.value && selectedDate;
-      submitBtn.disabled = !ok;
-    }
-
-
-    // 送信処理（Google Forms に POST）
-    submitBtn.addEventListener('click', () => {
-      if (!confirm(`[${currentMode}] ${selectedDate}\n予約を送信します。よろしいですか？`)) return;
-      document.getElementById("f-class").value = clsSel.value;
-      document.getElementById("f-name").value = sSel.value;
-      document.getElementById("f-date").value = selectedDate;
-      document.getElementById("f-mode").value = currentMode;
-      document.getElementById("f-time").value = (currentMode === "取消") ? "" : document.getElementById("exit-time").value;
-      document.getElementById("f-pickup").value = (currentMode === "取消") ? "" : document.getElementById("pickup-person").value;
-      document.getElementById("f-memo").value = document.getElementById("memo").value;
-      // フォーム送信（新しいタブで開く）
-      document.getElementById("hidden-form").submit();
-      // 送信完了メッセージ（Google 側の確認画面が開くため任意）
-      setTimeout(()=> alert("送信完了しました。確認画面が別タブで開きます。"), 200);
-    });
-
-    // 初期バリデーション
-    document.addEventListener('DOMContentLoaded', () => {
-      validate();
-    });
-  </script>
+    initPortal();
+</script>
 </body>
 </html>
