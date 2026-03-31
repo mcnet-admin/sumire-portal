@@ -202,7 +202,7 @@
             },
             body: JSON.stringify({
                 message: `予約(${mode}): ${nameText}`,
-                content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent, null, 2)))),
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))),
                 sha: sha
             })
         });
