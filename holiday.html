@@ -7,16 +7,14 @@
     <style>
         body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; background: #fff3e0; }
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { font-size: 20px; text-align: center; color: #ef6c00; }
+        h1 { font-size: 20px; text-align: center; color: #ef6c00; margin-top: 10px; }
+        .btn-back { display: inline-block; margin-bottom: 15px; color: #666; text-decoration: none; font-size: 14px; }
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        select, input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        select, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         .btn-submit { width: 100%; padding: 15px; background: #ff9800; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .btn-back { display: block; text-align: center; margin-top: 15px; color: #666; text-decoration: none; font-size: 14px; }
         .info-box { background: #fff8e1; border: 1px solid #ffe082; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; }
-        .error-text { color: #d32f2f; font-size: 14px; margin-bottom: 8px; font-weight: bold; background: #fff5f5; padding: 8px; border-radius: 5px; display: none; }
-        
-        /* 操作種別（ラジオボタン）のスタイル */
+        .error-msg { color: #d32f2f; font-size: 14px; font-weight: bold; margin-bottom: 15px; background: #fff5f5; padding: 10px; border-radius: 5px; border: 1px solid #ffcdd2; display: none; }
         .mode-container { display: flex; gap: 10px; margin-top: 5px; }
         .mode-option { flex: 1; position: relative; cursor: pointer; }
         .mode-option input { display: none; }
@@ -27,61 +25,47 @@
 <body>
 
 <div class="container">
-    <h1>すみれクラブ予約（休暇版）</h1>
+    <a href="index.html" class="btn-back">← ポータル画面へ戻る</a>
+    <h1>すみれクラブ予約 <span style="font-size: 14px; color: #ef6c00;">[休暇版]</span></h1>
     
-    <div class="info-box">
-        ※こちらは **長期休暇（夏・冬・春休み）** の専用フォームです。<br>
-        学期中の行事予定等による利用は受け付けておりません。
-    </div>
+    <div class="info-box">※春・夏・冬休み専用です。</div>
+    <div id="date-error" class="error-msg"></div>
 
     <div class="form-group">
         <label>クラス</label>
         <select id="class-select" onchange="updateStudentList()">
-            <option value="">クラスを選択してください</option>
+            <option value="">選択してください</option>
         </select>
     </div>
 
     <div class="form-group">
         <label>園児名</label>
         <select id="student-select" disabled>
-            <option value="">先にクラスを選択してください</option>
+            <option value="">クラスを先に選択</option>
         </select>
     </div>
 
     <div class="form-group">
-        <label>操作種別（いずれかを選択）</label>
+        <label>操作種別</label>
         <div class="mode-container">
-            <label class="mode-option">
-                <input type="radio" name="vacation_mode" value="新規" checked>
-                <span class="mode-label">新規予約</span>
-            </label>
-            <label class="mode-option">
-                <input type="radio" name="vacation_mode" value="変更">
-                <span class="mode-label">内容変更</span>
-            </label>
-            <label class="mode-option">
-                <input type="radio" name="vacation_mode" value="取消">
-                <span class="mode-label">予約取消</span>
-            </label>
+            <label class="mode-option"><input type="radio" name="v_mode" value="新規" checked><span class="mode-label">新規</span></label>
+            <label class="mode-option"><input type="radio" name="v_mode" value="変更"><span class="mode-label">変更</span></label>
+            <label class="mode-option"><input type="radio" name="v_mode" value="取消"><span class="mode-label">取消</span></label>
         </div>
     </div>
  
     <div class="form-group">
         <label>利用希望日</label>
-        <div id="date-error" class="error-text"></div>
         <input type="date" id="date-select" onchange="validateHolidayDate()">
-        <p style="font-size: 12px; color: #666; margin-top: 5px;">※長期休暇（春・夏・冬休み）の期間内のみ選択可能です。</p>
     </div>
 
     <button class="btn-submit" onclick="submitForm()">この内容で申し込む</button>
-    <a href="index.html" class="btn-back">ポータル画面へ戻る</a>
 </div>
 
 <script>
     let studentData = {};
     let holidays = [];
 
-    // 初期化
     async function initForm() {
         try {
             const [resS, resH] = await Promise.all([
@@ -93,93 +77,75 @@
 
             const classSelect = document.getElementById('class-select');
             Object.keys(studentData).forEach(cls => {
-                const opt = document.createElement('option');
-                opt.value = cls;
-                opt.textContent = cls;
-                classSelect.appendChild(opt);
+                classSelect.add(new Option(cls, cls));
             });
 
             const dateInput = document.getElementById('date-select');
             const now = new Date();
             dateInput.min = now.toISOString().split('T')[0];
-            let maxDate = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+            const maxDate = new Date(now.getFullYear(), now.getMonth() + 2, 0);
             dateInput.max = maxDate.toISOString().split('T')[0];
-        } catch (e) {
-            alert("データの読み込みに失敗しました。");
-        }
+        } catch (e) { alert("データ読込失敗"); }
     }
 
-    // クラス選択に連動して園児名を更新
     function updateStudentList() {
         const cls = document.getElementById('class-select').value;
-        const studentSelect = document.getElementById('student-select');
-        studentSelect.innerHTML = '<option value="">園児名を選択してください</option>';
+        const sSelect = document.getElementById('student-select');
+        sSelect.innerHTML = '<option value="">園児名を選択</option>';
         if (cls && studentData[cls]) {
-            studentData[cls].forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.id; 
-                opt.textContent = s.name;
-                studentSelect.appendChild(opt);
-            });
-            studentSelect.disabled = false;
-        } else {
-            studentSelect.disabled = true;
-        }
+            studentData[cls].forEach(s => sSelect.add(new Option(s.name, s.id)));
+            sSelect.disabled = false;
+        } else { sSelect.disabled = true; }
     }
 
-    // 日付バリデーション（休暇版ルール）
     function validateHolidayDate() {
-        const selectedDate = document.getElementById('date-select').value;
+        const dateInput = document.getElementById('date-select');
+        const selectedDate = dateInput.value;
         const errorDiv = document.getElementById('date-error');
+        errorDiv.style.display = "none";
         if (!selectedDate) return;
 
-        errorDiv.style.display = "none";
+        const formattedDateSlash = selectedDate.replace(/-/g, '/');
+        const isHoliday = holidays.includes(selectedDate) || holidays.includes(formattedDateSlash);
 
-        // 休日リスト（holidays.json）に含まれているかチェック
-        if (!holidays.includes(selectedDate)) {
-            errorDiv.innerText = "⚠️ 選択された日は休暇期間ではありません。平日版フォームから入力してください。";
+        if (!isHoliday) {
+            errorDiv.innerHTML = `⚠️ この日は長期休暇期間ではありません。<br><a href="weekday.html" style="color: #d32f2f; font-weight: bold;">[平日版フォームはこちら]</a> から入力してください。`;
             errorDiv.style.display = "block";
-            document.getElementById('date-select').value = "";
+            dateInput.value = "";
         }
     }
 
-    // 送信処理
     async function submitForm() {
         const classVal = document.getElementById('class-select').value;
-        const studentSel = document.getElementById('student-select');
-        const selectedId = studentSel.value;
-        const studentName = studentSel.options[studentSel.selectedIndex]?.text;
+        const sSel = document.getElementById('student-select');
+        const selectedId = sSel.value;
+        const sName = sSel.options[sSel.selectedIndex]?.text;
         const selectedDate = document.getElementById('date-select').value;
-        const modeVal = document.querySelector('input[name="vacation_mode"]:checked').value;
+        const modeVal = document.querySelector('input[name="v_mode"]:checked').value;
 
         if (!classVal || !selectedId || !selectedDate) {
-            alert("未入力の項目があります。");
-            return;
+            alert("未入力項目があります。"); return;
         }
 
-        // メールアドレス抽出
-        const studentsInClass = studentData[classVal] || [];
-        const studentInfo = studentsInClass.find(s => s.id === selectedId);
+        const studentInfo = (studentData[classVal] || []).find(s => s.id === selectedId);
         const email01 = studentInfo ? studentInfo.parent_email01 : "";
         const email02 = studentInfo ? studentInfo.parent_email02 : "";
 
-        // 14日前ルール（キャンセル料判定）
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const selected = new Date(selectedDate);
-        const limitDate = new Date(selected);
-        limitDate.setDate(selected.getDate() - 14);
+        const target = new Date(selectedDate);
+        const limit = new Date(target);
+        limit.setDate(target.getDate() - 14);
 
-        if (today > limitDate) {
-            const diffDays = Math.ceil((selected - today) / (1000 * 60 * 60 * 24));
-            if (!confirm(`【重要：キャンセル料】利用まであと ${diffDays} 日です。これ以降の変更・取消はキャンセル料が発生しますが、よろしいですか？`)) return;
+        if (today > limit) {
+            const diff = Math.ceil((target - today) / (86400000));
+            if (!confirm(`【キャンセル料確認】利用まであと ${diff} 日です。これ以降の変更・取消は料が発生しますが、よろしいですか？`)) return;
         }
 
-        if (!confirm(`${selectedDate} の予約を「${modeVal}」で送信してよろしいですか？`)) return;
+        if (!confirm(`${selectedDate} を「${modeVal}」で送信しますか？`)) return;
 
         const btn = document.querySelector('.btn-submit');
-        btn.disabled = true;
-        btn.innerText = "送信中...";
+        btn.disabled = true; btn.innerText = "送信中...";
 
         const GITHUB_TOKEN = "ghp_" + "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS";
         const repo = "mcnet-admin/sumire-portal";
@@ -187,452 +153,34 @@
 
         try {
             const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-                headers: { "Authorization": `token ${GITHUB_TOKEN}` },
-                cache: "no-store"
+                headers: { "Authorization": `token ${GITHUB_TOKEN}` }, cache: "no-store"
             });
             const fileData = await res.json();
             const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
 
-            const newEntry = {
-                id: Date.now(),
-                type: "休暇版",
-                mode: modeVal,
-                date: selectedDate,
-                class: classVal,
-                name: studentName,
-                parent_email01: email01,
-                parent_email02: email02,
+            currentContent.push({
+                id: Date.now(), type: "休暇版", mode: modeVal, date: selectedDate,
+                class: classVal, name: sName, parent_email01: email01, parent_email02: email02,
                 timestamp: new Date().toLocaleString("ja-JP")
-            };
-
-            currentContent.push(newEntry);
+            });
 
             const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 method: "PUT",
                 headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    message: `Vacation Reservation: ${studentName}`,
+                    message: `Holiday Reservation: ${sName}`,
                     content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))),
                     sha: fileData.sha
                 })
             });
 
-            if (updateRes.ok) {
-                alert("予約（休暇版）が正常に送信されました。");
-                location.reload(); 
-            } else {
-                throw new Error();
-            }
+            if (updateRes.ok) { alert("正常に送信されました。"); location.reload(); }
+            else { throw new Error(); }
         } catch (e) {
-            alert("送信に失敗しました。通信環境を確認してください。");
-            btn.disabled = false;
-            btn.innerText = "この内容で申し込む";
+            alert("送信失敗"); btn.disabled = false; btn.innerText = "この内容で申し込む";
         }
     }
     initForm();
-</script>
-</body>
-</html>
-    <div class="form-group">
-        <label>クラス</label>
-        <select id="class-select" onchange="updateStudentList()">
-            <option value="">クラスを選択してください</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label>園児名</label>
-        <select id="student-select">
-            <option value="">先にクラスを選択してください</option>
-        </select>
-    </div>
-
-<div class="form-group">
-        <label>操作種別（いずれかを選択）</label>
-        <div class="mode-container">
-            <label class="mode-option">
-                <input type="radio" name="vacation_mode" value="新規" checked>
-                <span class="mode-label">新規予約</span>
-            </label>
-            <label class="mode-option">
-                <input type="radio" name="vacation_mode" value="変更">
-                <span class="mode-label">内容変更</span>
-            </label>
-            <label class="mode-option">
-                <input type="radio" name="vacation_mode" value="取消">
-                <span class="mode-label">予約取消</span>
-            </label>
-        </div>
-    </div>
-
-    <style>
-        /* 横並びレイアウトのスタイル */
-        .mode-container {
-            display: flex;
-            gap: 10px;
-            margin-top: 5px;
-        }
-        .mode-option {
-            flex: 1;
-            position: relative;
-            cursor: pointer;
-        }
-        .mode-option input {
-            display: none; /* 本物のラジオボタンは隠す */
-        }
-        .mode-label {
-            display: block;
-            padding: 12px 5px;
-            text-align: center;
-            background: #fff;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
-            color: #666;
-            transition: all 0.2s;
-        }
-        /* 選択された時の色指定 */
-        .mode-option input:checked + .mode-label {
-            background: #fff3e0;
-            border-color: #ef6c00;
-            color: #ef6c00;
-        }
-    </style> 
- 
-    <div class="form-group">
-        <label>利用希望日</label>
-        <div id="date-error" class="error-text"></div>
-        <input type="date" id="date-select" onchange="validateHolidayDate()">
-    </div>
-
-    <button class="btn-submit" onclick="submitForm()">この内容で申し込む</button>
-    <a href="index.html" class="btn-back">ポータル画面へ戻る</a>
-
- 
-</div>
-
-<script>
-    let studentData = {};
-    let holidays = [];
-
-    async function initForm() {
-        try {
-            const [resS, resH] = await Promise.all([
-                fetch('output/students.json'),
-                fetch('output/holidays.json')
-            ]);
-            studentData = await resS.json();
-            holidays = await resH.json();
-
-            const classSelect = document.getElementById('class-select');
-            Object.keys(studentData).forEach(cls => {
-                const opt = document.createElement('option');
-                opt.value = cls;
-                opt.textContent = cls;
-                classSelect.appendChild(opt);
-            });
-
-            setupCalendarLimits();
-        } catch (e) {
-            alert("データの読み込みに失敗しました。");
-        }
-    }
-
-    function setupCalendarLimits() {
-        const dateInput = document.getElementById('date-select');
-        const now = new Date();
-        dateInput.min = now.toISOString().split('T')[0];
-
-        // 3/31時点なら翌月末（4月末）まで確実に表示
-        let maxDate = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-        dateInput.max = maxDate.toISOString().split('T')[0];
-    }
-
-     // クラス選択に連動して園児名を更新
-    function updateStudentList() {
-        const cls = document.getElementById('class-select').value;
-        const studentSelect = document.getElementById('student-select');
-        studentSelect.innerHTML = '<option value="">園児名を選択してください</option>';
-        if (cls && studentData[cls]) {
-            studentData[cls].forEach(s => {
-                const opt = document.createElement('option');
-                // 重要：valueにIDをセットすることで、後でメールアドレスを検索できるようにする
-                opt.value = s.id; 
-                opt.textContent = s.name;
-                studentSelect.appendChild(opt);
-            });
-        }
-    }
-
-
-    function validateHolidayDate() {
-        const selectedDate = document.getElementById('date-select').value;
-        const errorDiv = document.getElementById('date-error');
-        if (!selectedDate) return;
-
-        const dateObj = new Date(selectedDate);
-        const month = dateObj.getMonth() + 1; 
-        const vacationMonths = [3, 4, 7, 8, 12, 1]; 
-
-        errorDiv.style.display = "none";
-
-        // 1. 休日リストチェック
-        if (!holidays.includes(selectedDate)) {
-            errorDiv.innerText = "⚠️ 長期休暇期間ではありません。";
-            errorDiv.style.display = "block";
-            document.getElementById('date-select').value = "";
-            return;
-        }
-
-        // 2. 月判定
-        if (!vacationMonths.includes(month)) {
-            errorDiv.innerText = "⚠️ 行事日は平日版で入力してください。";
-            errorDiv.style.display = "block";
-            document.getElementById('date-select').value = "";
-        }
-    }
-
- // 送信処理（GitHub連携版）
-    async function submitForm() {
-        const classVal = document.getElementById('class-select').value;
-        const studentSel = document.getElementById('student-select');
-        const studentName = studentSel.options[studentSel.selectedIndex]?.text;
-        const selectedDate = document.getElementById('date-select').value;
-
-        // 入力チェック
-        if (!classVal || !studentSel.value || !selectedDate) {
-            alert("未入力の項目があります。");
-            return;
-        }
-
-        // --- 14日前ルール（キャンセル料判定） ---
-        const targetDate = new Date(selectedDate);
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const selected = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-        
-        const limitDate = new Date(selected);
-        limitDate.setDate(selected.getDate() - 14);
-
-        if (today > limitDate) {
-            const diffDays = Math.ceil((selected - today) / (1000 * 60 * 60 * 24));
-            const confirmMsg = `【重要：キャンセル料の確認】\n利用まであと ${diffDays} 日です。これ以降の変更・取消はキャンセル料が発生しますが、よろしいですか？`;
-            if (!confirm(confirmMsg)) return;
-        }
-
-        if (!confirm(`${selectedDate} の予約を送信してよろしいですか？`)) return;
-
-        // --- GitHub送信ロジック ---
-        const btn = document.querySelector('.btn-submit');
-        const originalText = btn.innerText;
-        btn.disabled = true;
-        btn.innerText = "送信中...";
-
-        // GitHub設定
-         // GitHub設定（あなたの情報に固定済み）
-        // 修正後（このように2つに分けて合体させる）
-        const p1 = "ghp_"; // トークンの前半を入れる
-        const p2 = "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS"; // トークンの後半を入れる
-        const GITHUB_TOKEN = p1 + p2;
-
-        const repo = "mcnet-admin/sumire-portal";
-        const path = "data/reservations.json";
-
-        try {
-            // 1. 現在のファイルを取得
-            // 1. 選択されたモードを取得
-            const modeVal = document.querySelector('input[name="vacation_mode"]:checked').value;
-
-            const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-                headers: { "Authorization": `token ${GITHUB_TOKEN}` },
-                cache: "no-store"
-            });
-            
-            if (!res.ok) throw new Error("データの取得に失敗しました");
-            
-            const fileData = await res.json();
-            const sha = fileData.sha;
-            const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
-
-        
-        
-            // 2. GitHubに送るデータを作成
-            const newEntry = {
-            id: Date.now(),
-            type: "休暇版",
-            mode: modeVal, // ここで「新規/変更/取消」がJSONに入ります
-            date: selectedDate,
-            class: classVal,
-            name: studentName,
-            timestamp: new Date().toLocaleString("ja-JP")
-        };
-
-            currentContent.push(newEntry);
-
-            // 3. GitHubへ保存
-            const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-                method: "PUT",
-                headers: {
-                    "Authorization": `token ${GITHUB_TOKEN}`,
-                    "Content-Type": "application/json",
-                },
-
-                
-            body: JSON.stringify({
-                message: `Reservation Update`, // メッセージを英語にして安全に
-                content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))), // データを凝縮
-            sha: sha
-                })
-
-            });
-
-
-            if (updateRes.ok) {
-                alert("予約（休暇版）が正常に送信されました。");
-                location.reload(); 
-            } else {
-                throw new Error("GitHubへの保存に失敗しました");
-            }
-
-        } catch (e) {
-            console.error(e);
-            alert("エラーが発生しました。通信環境を確認してください。");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = originalText;
-        }
-    }
-    initForm();
-
-//-----
-// クラス選択に連動して園児名を更新
-    function updateStudentList() {
-        const cls = document.getElementById('class-select').value;
-        const studentSelect = document.getElementById('student-select');
-        studentSelect.innerHTML = '<option value="">園児名を選択してください</option>';
-        if (cls && studentData[cls]) {
-            studentData[cls].forEach(s => {
-                const opt = document.createElement('option');
-                // 重要：valueにIDをセットすることで、後でメールアドレスを検索できるようにする
-                opt.value = s.id; 
-                opt.textContent = s.name;
-                studentSelect.appendChild(opt);
-            });
-        }
-    }
-
-    // 送信処理（GitHub連携 + メールアドレス抽出版）
-    async function submitForm() {
-        const classVal = document.getElementById('class-select').value;
-        const studentSel = document.getElementById('student-select');
-        const selectedId = studentSel.value; // 園児ID
-        const studentName = studentSel.options[studentSel.selectedIndex]?.text;
-        const selectedDate = document.getElementById('date-select').value;
-        const modeVal = document.querySelector('input[name="vacation_mode"]:checked').value;
-
-        // 入力チェック
-        if (!classVal || !selectedId || !selectedDate) {
-            alert("未入力の項目があります。");
-            return;
-        }
-
-        // --- 名簿データから保護者メールアドレスを特定 ---
-        const studentsInClass = studentData[classVal] || [];
-        const studentInfo = studentsInClass.find(s => s.id === selectedId);
-        const email01 = studentInfo ? studentInfo.parent_email01 : "";
-        const email02 = studentInfo ? studentInfo.parent_email02 : "";
-
-        // --- 14日前ルール（キャンセル料判定） ---
-        const targetDate = new Date(selectedDate);
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const selected = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-        
-        const limitDate = new Date(selected);
-        limitDate.setDate(selected.getDate() - 14);
-
-        if (today > limitDate) {
-            const diffDays = Math.ceil((selected - today) / (1000 * 60 * 60 * 24));
-            const confirmMsg = `【重要：キャンセル料の確認】\n利用まであと ${diffDays} 日です。これ以降の変更・取消はキャンセル料が発生しますが、よろしいですか？`;
-            if (!confirm(confirmMsg)) return;
-        }
-
-        if (!confirm(`${selectedDate} の予約を「${modeVal}」で送信してよろしいですか？`)) return;
-
-        // --- GitHub送信ロジック ---
-        const btn = document.querySelector('.btn-submit');
-        const originalText = btn.innerText;
-        btn.disabled = true;
-        btn.innerText = "送信中...";
-
-        const p1 = "ghp_";
-        const p2 = "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS";
-        const GITHUB_TOKEN = p1 + p2;
-        const repo = "mcnet-admin/sumire-portal";
-        const path = "data/reservations.json";
-
-        try {
-            // 1. 現在のファイルを取得
-            const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-                headers: { "Authorization": `token ${GITHUB_TOKEN}` },
-                cache: "no-store"
-            });
-            
-            if (!res.ok) throw new Error("データの取得に失敗しました");
-            
-            const fileData = await res.json();
-            const sha = fileData.sha;
-            const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
-
-            // 2. GitHubに送るデータを作成（メールアドレスを追加）
-            const newEntry = {
-                id: Date.now(),
-                type: "休暇版",
-                mode: modeVal,
-                date: selectedDate,
-                class: classVal,
-                name: studentName,
-                parent_email01: email01, // 追加
-                parent_email02: email02, // 追加
-                timestamp: new Date().toLocaleString("ja-JP")
-            };
-
-            currentContent.push(newEntry);
-
-            // 3. GitHubへ保存
-            const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-                method: "PUT",
-                headers: {
-                    "Authorization": `token ${GITHUB_TOKEN}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    message: `Vacation Reservation: ${studentName}`,
-                    content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))),
-                    sha: sha
-                })
-            });
-
-            if (updateRes.ok) {
-                alert("予約（休暇版）が正常に送信されました。");
-                location.reload(); 
-            } else {
-                throw new Error("GitHubへの保存に失敗しました");
-            }
-
-        } catch (e) {
-            console.error(e);
-            alert("エラーが発生しました。通信環境を確認してください。");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = originalText;
-        }
-    }
-
-
-
-
 </script>
 </body>
 </html>

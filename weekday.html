@@ -11,14 +11,16 @@
         label { display: block; font-weight: bold; margin-bottom: 8px; color: #333; }
         select, input, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
         .btn-submit { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .btn-back { display: inline-block; margin-bottom: 15px; color: #666; text-decoration: none; font-size: 14px; }
         .note { font-size: 12px; color: #666; margin-top: 5px; line-height: 1.4; }
-        .error-msg { color: #d32f2f; font-size: 13px; font-weight: bold; margin-top: 5px; display: none; min-height: 1.5em; }
+        .error-msg { color: #d32f2f; font-size: 14px; font-weight: bold; margin-bottom: 15px; background: #fff5f5; padding: 10px; border-radius: 5px; border: 1px solid #ffcdd2; display: none; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>すみれクラブ予約 <span style="font-size: 14px; color: #007bff;">[平日用]</span></h2>
+    <a href="index.html" class="btn-back">← ポータル画面へ戻る</a>
+    <h2>すみれクラブ予約 <span style="font-size: 14px; color: #28a745;">[平日用]</span></h2>
     
     <div id="date-error" class="error-msg"></div>
 
@@ -123,7 +125,6 @@
         const classVal = document.getElementById('class-select').value;
         const nameSel = document.getElementById('name-select');
         nameSel.innerHTML = '<option value="">選択してください</option>';
-        
         if (classVal && masterData[classVal]) {
             masterData[classVal].forEach(s => {
                 nameSel.add(new Option(s.name, s.id));
@@ -142,19 +143,16 @@
         
         if (!selectedDate) return;
 
-        // スラッシュ形式も比較対象に含める（Excel由来対策）
         const formattedDateSlash = selectedDate.replace(/-/g, '/');
         const isHoliday = holidays.includes(selectedDate) || holidays.includes(formattedDateSlash);
 
-        // 1. 長期休暇チェック
         if (isHoliday) {
-            errorDiv.innerText = "⚠️ 選択された日は休暇期間です。休暇版から入力してください。";
+            errorDiv.innerHTML = `⚠️ 選択された日は休暇期間です。<br><a href="holiday.html" style="color: #d32f2f; font-weight: bold;">[休暇版フォームはこちら]</a> から入力してください。`;
             errorDiv.style.display = "block";
             dateInput.value = "";
             return;
         }
 
-        // 2. 締め切りチェック (前日15:30)
         const now = new Date();
         const targetDate = new Date(selectedDate);
         const limitDate = new Date(targetDate);
@@ -162,10 +160,9 @@
         limitDate.setHours(15, 30, 0, 0);
 
         if (now > limitDate) {
-            errorDiv.innerText = "⚠️ 予約締め切り（前日15:30）を過ぎているため、システムからは入力できません。園までお電話ください。";
+            errorDiv.innerText = "⚠️ 予約締め切り（前日15:30）を過ぎているため、園までお電話ください。";
             errorDiv.style.display = "block";
             dateInput.value = "";
-            return;
         }
     }
 
