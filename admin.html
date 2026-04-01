@@ -10,15 +10,13 @@
         h1 { border-left: 6px solid #1976d2; padding-left: 15px; font-size: 24px; }
         .section { margin-bottom: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; }
         .grid { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
-        .stat-badge { background: #e3f2fd; padding: 10px 20px; border-radius: 50px; font-weight: bold; color: #1565c0; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { border: 1px solid #eee; padding: 12px; text-align: left; }
         th { background: #f5f5f5; color: #666; font-size: 14px; }
         input, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-blue { background: #1976d2; color: white; }
-        .btn-orange { background: #ef6c00; color: white; }
-        .btn:hover { opacity: 0.8; }
+        .btn-green { background: #2e7d32; color: white; }
     </style>
 </head>
 <body>
@@ -26,9 +24,20 @@
 <div class="container">
     <h1>すみれクラブ 管理者パネル</h1>
 
-    <div class="section" style="background: #fff3e0; border: 1px solid #ffcc80;">
-        <strong>ℹ️ お知らせ:</strong>
-        <p style="font-size:13px; margin:5px 0;">アプリパスワードはコード内に設定済みです。そのまま送信ボタンを押してください。</p>
+    <div class="section" style="background: #e8f5e9; border: 2px solid #4caf50;">
+        <strong>🔑 セキュリティ認証（毎回入力してください）</strong>
+        <div class="grid" style="margin-top:10px;">
+            <div>
+                <label style="display:block; font-size:12px;">GitHub Token (ghp_...)</label>
+                <input type="password" id="gh-token" style="width:250px;" placeholder="先ほどコピーしたghpから始まる英数字">
+            </div>
+            <div>
+                <label style="display:block; font-size:12px;">Gmailアプリパスワード</label>
+                <input type="password" id="app-pass" style="width:200px;" placeholder="新しく発行した16桁">
+            </div>
+            <button class="btn btn-green" onclick="loadInitialData()">① データを読み込む</button>
+        </div>
+        <p style="font-size:11px; color:#666; margin-top:10px;">※ GitHubに怒られないための安全対策です。入力した情報は保存されません。</p>
     </div>
 
     <div class="section">
@@ -38,133 +47,92 @@
                 <label style="display:block; font-size:12px;">表示・送信対象日</label>
                 <input type="date" id="target-date" onchange="refreshView()">
             </div>
-            <button class="btn btn-blue" onclick="sendStaffEmail()">この日のリストを自分宛に送信テスト</button>
+            <button class="btn btn-blue" onclick="sendStaffEmail()">② この日のリストを自分宛に送信</button>
         </div>
         <div id="summary-badges" class="grid" style="margin-top:20px;">
-            <div class="stat-badge">変更・延長：<span id="total-count">0</span>名</div>
+            <div style="background:#e3f2fd; padding:10px; border-radius:50px;">変更・延長：<span id="total-count">0</span>名</div>
         </div>
         <table id="daily-table">
             <thead>
-                <tr><th>クラス</th><th>園児名</th><th>時間帯（料金）</th><th>お迎え</th><th>備考</th></tr>
+                <tr><th>クラス</th><th>園児名</th><th>時間帯</th><th>お迎え</th><th>備考</th></tr>
             </thead>
             <tbody></tbody>
         </table>
     </div>
-
-    <div class="section" style="border-color: #ffb74d;">
-        <h3>💰 臨時徴収（バイパス入力）</h3>
-        <div class="grid">
-            <select id="extra-student-select"><option value="">園児を選択</option></select>
-            <input type="text" id="extra-item" placeholder="項目名（例：写真代）">
-            <input type="number" id="extra-amount" placeholder="金額">
-            <button class="btn btn-orange" onclick="saveExtraFee()">臨時徴収として登録</button>
-        </div>
-        <div id="extra-status" style="margin-top:10px; color:#2e7d32; font-size:14px;"></div>
-    </div>
 </div>
 
 <script>
-    // --- 基本設定 ---
-    const GITHUB_TOKEN = "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";
     const ADMIN_EMAIL = "mcnet-admin@mclean.ed.jp";
-    const DIRECT_APP_PASS = "bayugwmzlvcgvffv"; // スクリーンショットの16桁（スペースなし）
-
     let reservations = [];
 
-    // --- 起動時の処理 ---
-    window.onload = async () => {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('target-date').value = today;
-        await loadInitialData();
-        refreshView();
-    };
-
-    // --- GitHubからデータ読み込み ---
+    // --- GitHubからデータ読み込み（手動起動） ---
     async function loadInitialData() {
+        const token = document.getElementById('gh-token').value;
+        if(!token) { alert("GitHub Tokenを入力してください"); return; }
+
         try {
             const url = `https://api.github.com/repos/mcnet-admin/sumire-portal/contents/data/reservations.json`;
             const res = await fetch(url, {
-                headers: { "Authorization": `token ${GITHUB_TOKEN}` },
+                headers: { "Authorization": `token ${token}` },
                 cache: "no-store"
             });
-            if (!res.ok) throw new Error("GitHub通信エラー");
+            if (!res.ok) throw new Error("認証失敗。Tokenが間違っているか、無効です。");
+            
             const data = await res.json();
             const content = decodeURIComponent(escape(atob(data.content)));
             reservations = JSON.parse(content);
             
-            // 園児名簿の読み込み
+            // 園児名簿（これは公開情報なのでそのまま）
             const stuRes = await fetch("output/students.json");
             const stuData = await stuRes.json();
-            const stuSelect = document.getElementById('extra-student-select');
-            Object.values(stuData).flat().forEach(s => {
-                stuSelect.add(new Option(`${s.class} ${s.name}`, s.id));
-            });
+            
+            alert("✅ データの読み込みに成功しました！");
+            refreshView();
         } catch (e) { 
-            console.error("Data load error:", e);
+            alert("❌ 読み込みエラー: " + e.message);
         }
     }
 
-    // --- 画面の表示更新 ---
     function refreshView() {
         const target = document.getElementById('target-date').value;
         const filtered = reservations.filter(r => r.date === target);
         const tbody = document.querySelector("#daily-table tbody");
-        if(!tbody) return;
-        tbody.innerHTML = "";
-        
-        filtered.forEach(r => {
-            tbody.insertAdjacentHTML('beforeend', `
-                <tr><td>${r.class}</td><td>${r.name}</td><td>${r.time_frame} (¥${r.cost})</td><td>${r.pickup}</td><td>${r.memo || ""}</td></tr>
-            `);
-        });
+        tbody.innerHTML = filtered.map(r => `
+            <tr><td>${r.class}</td><td>${r.name}</td><td>${r.time_frame}</td><td>${r.pickup}</td><td>${r.memo || ""}</td></tr>
+        `).join('');
         document.getElementById('total-count').innerText = filtered.length;
     }
 
-    // --- メール送信処理 ---
     function sendStaffEmail() {
+        const pass = document.getElementById('app-pass').value;
         const target = document.getElementById('target-date').value;
-        const filtered = reservations.filter(r => r.date === target);
-        
-        let tableHtml = `<table border="1" style="border-collapse:collapse; width:100%;">
-            <tr style="background:#f5f5f5;"><th>クラス</th><th>名</th><th>時間</th><th>迎</th><th>備考</th></tr>`;
-        
-        filtered.forEach(r => {
-            tableHtml += `<tr><td>${r.class}</td><td>${r.name}</td><td>${r.time_frame}</td><td>${r.pickup}</td><td>${r.memo || ""}</td></tr>`;
-        });
-        tableHtml += `</table>`;
+        if(!pass) { alert("Gmailアプリパスワードを入力してください"); return; }
+        if(reservations.length === 0) { alert("先に『データを読み込む』を押してください"); return; }
 
-        // 送信開始のアラート
-        alert("送信処理を開始します...");
+        const filtered = reservations.filter(r => r.date === target);
+        let tableHtml = `<table border="1" style="border-collapse:collapse; width:100%;">
+            <tr style="background:#f5f5f5;"><th>クラス</th><th>名</th><th>時間</th><th>備考</th></tr>
+            ${filtered.map(r => `<tr><td>${r.class}</td><td>${r.name}</td><td>${r.time_frame}</td><td>${r.memo || ""}</td></tr>`).join('')}
+        </table>`;
+
+        alert("送信を開始します...");
 
         Email.send({
             Host: "smtp.gmail.com",
             Username: ADMIN_EMAIL,
-            Password: DIRECT_APP_PASS, 
+            Password: pass, 
             To: ADMIN_EMAIL,
             From: ADMIN_EMAIL,
-            Subject: `【テスト】${target} すみれ予約リスト`,
-            Body: `<h3>${target} の予約状況（${filtered.length}名）</h3>` + tableHtml
+            Subject: `【最新】${target} すみれ配置リスト`,
+            Body: `<h3>${target} の予約（${filtered.length}名）</h3>` + tableHtml
         }).then(message => {
-            if (message === "OK") {
-                alert("✅ 送信成功しました！\nGmailの『送信済み』フォルダと『受信トレイ』を確認してください。");
-            } else {
-                alert("❌ 送信失敗しました。\n理由: " + message);
-            }
-        }).catch(err => {
-            alert("⚠️ 通信エラーが発生しました:\n" + err);
+            alert("結果: " + message);
         });
     }
 
-    // --- 臨時徴収（画面表示のみ） ---
-    function saveExtraFee() {
-        const sSelect = document.getElementById('extra-student-select');
-        if(!sSelect || !sSelect.value) { alert("園児を選択してください"); return; }
-        const sName = sSelect.options[sSelect.selectedIndex].text;
-        const item = document.getElementById('extra-item').value;
-        const price = document.getElementById('extra-amount').value;
-        if(!item || !price) { alert("項目と金額を入力してください"); return; }
-        document.getElementById('extra-status').innerText = `✅ ${sName}さんに ${item}(¥${price}) を記録しました。`;
-    }
+    window.onload = () => {
+        document.getElementById('target-date').value = new Date().toISOString().split('T')[0];
+    };
 </script>
 </body>
-</html>S
+</html>
