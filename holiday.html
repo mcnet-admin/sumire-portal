@@ -7,13 +7,13 @@
     <style>
         body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; background: #fff3e0; }
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { font-size: 20px; text-align: center; color: #ef6c00; margin-top: 10px; }
+        h1 { font-size: 20px; text-align: center; color: #ef6c00; margin: 10px 0; }
         .btn-back { display: inline-block; margin-bottom: 15px; color: #666; text-decoration: none; font-size: 14px; }
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         select, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         .btn-submit { width: 100%; padding: 15px; background: #ff9800; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .info-box { background: #fff8e1; border: 1px solid #ffe082; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; }
+        .info-box { background: #fff8e1; border: 1px solid #ffe082; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; line-height: 1.4; }
         .error-msg { color: #d32f2f; font-size: 14px; font-weight: bold; margin-bottom: 15px; background: #fff5f5; padding: 10px; border-radius: 5px; border: 1px solid #ffcdd2; display: none; }
         .mode-container { display: flex; gap: 10px; margin-top: 5px; }
         .mode-option { flex: 1; position: relative; cursor: pointer; }
@@ -28,25 +28,29 @@
     <a href="index.html" class="btn-back">← ポータル画面へ戻る</a>
     <h1>すみれクラブ予約 <span style="font-size: 14px; color: #ef6c00;">[休暇版]</span></h1>
     
-    <div class="info-box">※春・夏・冬休み専用です。</div>
+    <div class="info-box">
+        ※長期休暇（春・夏・冬休み）専用のフォームです。<br>
+        ※利用日の14日前を過ぎた変更・取消は料金が発生します。
+    </div>
+
     <div id="date-error" class="error-msg"></div>
 
     <div class="form-group">
-        <label>クラス</label>
+        <label>① クラス</label>
         <select id="class-select" onchange="updateStudentList()">
             <option value="">選択してください</option>
         </select>
     </div>
 
     <div class="form-group">
-        <label>園児名</label>
+        <label>② 園児名</label>
         <select id="student-select" disabled>
             <option value="">クラスを先に選択</option>
         </select>
     </div>
 
     <div class="form-group">
-        <label>操作種別</label>
+        <label>③ 操作種別</label>
         <div class="mode-container">
             <label class="mode-option"><input type="radio" name="v_mode" value="新規" checked><span class="mode-label">新規</span></label>
             <label class="mode-option"><input type="radio" name="v_mode" value="変更"><span class="mode-label">変更</span></label>
@@ -55,8 +59,33 @@
     </div>
  
     <div class="form-group">
-        <label>利用希望日</label>
+        <label>④ 利用希望日</label>
         <input type="date" id="date-select" onchange="validateHolidayDate()">
+    </div>
+
+    <div class="form-group">
+        <label>⑤ 利用時間帯（料金）</label>
+        <select id="time-cost-select">
+            <option value="">選択してください</option>
+            <optgroup label="早朝のみ">
+                <option value="8:00-8:30" data-cost="200">8:00 - 8:30 (¥200)</option>
+            </optgroup>
+            <optgroup label="基本時間〜延長">
+                <option value="8:30-11:45" data-cost="500">8:30 - 11:45 (¥500)</option>
+                <option value="8:30-13:00" data-cost="700">8:30 - 13:00 (¥700)</option>
+                <option value="8:30-14:00" data-cost="900">8:30 - 14:00 (¥900)</option>
+                <option value="8:30-15:00" data-cost="1100">8:30 - 15:00 (¥1,100)</option>
+                <option value="8:30-16:00" data-cost="1300">8:30 - 16:00 (¥1,300)</option>
+                <option value="8:30-16:30" data-cost="1400">8:30 - 16:30 (¥1,400)</option>
+                <option value="8:30-17:00" data-cost="1600">8:30 - 17:00 (¥1,600)</option>
+                <option value="8:30-17:30" data-cost="1800">8:30 - 17:30 (¥1,800)</option>
+                <option value="8:30-18:00" data-cost="2000">8:30 - 18:00 (¥2,000)</option>
+            </optgroup>
+            <optgroup label="早朝 + 基本〜延長">
+                <option value="8:00-16:30" data-cost="1600">8:00 - 16:30 (¥1,600)</option>
+                <option value="8:00-18:00" data-cost="2200">8:00 - 18:00 (¥2,200)</option>
+            </optgroup>
+        </select>
     </div>
 
     <button class="btn-submit" onclick="submitForm()">この内容で申し込む</button>
@@ -122,8 +151,11 @@
         const sName = sSel.options[sSel.selectedIndex]?.text;
         const selectedDate = document.getElementById('date-select').value;
         const modeVal = document.querySelector('input[name="v_mode"]:checked').value;
+        const timeSel = document.getElementById('time-cost-select');
+        const selectedTime = timeSel.value;
+        const selectedCost = timeSel.options[timeSel.selectedIndex]?.dataset.cost || 0;
 
-        if (!classVal || !selectedId || !selectedDate) {
+        if (!classVal || !selectedId || !selectedDate || !selectedTime) {
             alert("未入力項目があります。"); return;
         }
 
@@ -139,10 +171,10 @@
 
         if (today > limit) {
             const diff = Math.ceil((target - today) / (86400000));
-            if (!confirm(`【キャンセル料確認】利用まであと ${diff} 日です。これ以降の変更・取消は料が発生しますが、よろしいですか？`)) return;
+            if (!confirm(`【重要：キャンセル料】利用まであと ${diff} 日です。これ以降の変更・取消は規定の料金が発生しますが、よろしいですか？`)) return;
         }
 
-        if (!confirm(`${selectedDate} を「${modeVal}」で送信しますか？`)) return;
+        if (!confirm(`${selectedDate}\n時間：${selectedTime}\n料金：¥${selectedCost}\n\nこの内容で送信しますか？`)) return;
 
         const btn = document.querySelector('.btn-submit');
         btn.disabled = true; btn.innerText = "送信中...";
@@ -159,8 +191,16 @@
             const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
 
             currentContent.push({
-                id: Date.now(), type: "休暇版", mode: modeVal, date: selectedDate,
-                class: classVal, name: sName, parent_email01: email01, parent_email02: email02,
+                id: Date.now(),
+                type: "休暇版",
+                mode: modeVal,
+                date: selectedDate,
+                class: classVal,
+                name: sName,
+                time_frame: selectedTime,
+                cost: parseInt(selectedCost),
+                parent_email01: email01,
+                parent_email02: email02,
                 timestamp: new Date().toLocaleString("ja-JP")
             });
 
