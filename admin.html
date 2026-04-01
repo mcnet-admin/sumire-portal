@@ -26,10 +26,9 @@
 <div class="container">
     <h1>すみれクラブ 管理者パネル</h1>
 
-    <div class="section" style="background: #eee;">
-        <strong>🔑 アプリパスワード設定:</strong>
-        <input type="password" id="app-pass" placeholder="16桁のパスワード" style="width:200px;">
-        <span style="font-size:12px; color:#666;">（送信時に必要です）</span>
+    <div class="section" style="background: #fff3e0; border: 1px solid #ffcc80;">
+        <strong>ℹ️ お知らせ:</strong>
+        <p style="font-size:13px; margin:5px 0;">アプリパスワードはコード内に設定済みです。そのまま送信ボタンを押してください。</p>
     </div>
 
     <div class="section">
@@ -39,7 +38,7 @@
                 <label style="display:block; font-size:12px;">表示・送信対象日</label>
                 <input type="date" id="target-date" onchange="refreshView()">
             </div>
-            <button class="btn btn-blue" onclick="sendStaffEmail()">この日のリストを現場へ送信</button>
+            <button class="btn btn-blue" onclick="sendStaffEmail()">この日のリストを自分宛に送信テスト</button>
         </div>
         <div id="summary-badges" class="grid" style="margin-top:20px;">
             <div class="stat-badge">変更・延長：<span id="total-count">0</span>名</div>
@@ -65,8 +64,11 @@
 </div>
 
 <script>
-    const GITHUB_TOKEN = "ghp_" + "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS";
+    const GITHUB_TOKEN = "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";
     const ADMIN_EMAIL = "mcnet-admin@mclean.ed.jp";
+    // ここにアプリパスワードを直書きしました（スペースなし）
+    const DIRECT_APP_PASS = "bayugwmzlvcgvffv"; 
+
     let reservations = [];
 
     window.onload = async () => {
@@ -78,29 +80,32 @@
 
     async function loadInitialData() {
         try {
-            const url = "https://api.github.com/repos/mcnet-admin/sumire-portal/contents/data/reservations.json";
+            const url = `https://api.github.com/repos/mcnet-admin/sumire-portal/contents/data/reservations.json`;
             const res = await fetch(url, {
                 headers: { "Authorization": `token ${GITHUB_TOKEN}` },
                 cache: "no-store"
             });
+            if (!res.ok) throw new Error("GitHub通信エラー");
             const data = await res.json();
             const content = decodeURIComponent(escape(atob(data.content)));
             reservations = JSON.parse(content);
             
-            // 園児名簿の読み込み（パスを絶対パスに変更して安定化）
             const stuRes = await fetch("output/students.json");
             const stuData = await stuRes.json();
             const stuSelect = document.getElementById('extra-student-select');
             Object.values(stuData).flat().forEach(s => {
                 stuSelect.add(new Option(`${s.class} ${s.name}`, s.id));
             });
-        } catch (e) { console.error("Data load error:", e); }
+        } catch (e) { 
+            console.error("Data load error:", e);
+        }
     }
 
     function refreshView() {
         const target = document.getElementById('target-date').value;
         const filtered = reservations.filter(r => r.date === target);
         const tbody = document.querySelector("#daily-table tbody");
+        if(!tbody) return;
         tbody.innerHTML = "";
         
         filtered.forEach(r => {
@@ -112,13 +117,9 @@
     }
 
     function sendStaffEmail() {
-        alert("プログラムは動いています"); // ← これを追加
-        const pass = document.getElementById('app-pass').value;
         const target = document.getElementById('target-date').value;
-        
-        if(!pass) { alert("16桁のアプリパスワードを入力してください"); return; }
-
         const filtered = reservations.filter(r => r.date === target);
+        
         let tableHtml = `<table border="1" style="border-collapse:collapse; width:100%;">
             <tr style="background:#f5f5f5;"><th>クラス</th><th>名</th><th>時間</th><th>迎</th><th>備考</th></tr>`;
         
@@ -127,34 +128,37 @@
         });
         tableHtml += `</table>`;
 
-    
+        // 送信開始のアラート
+        alert("送信処理を開始します...");
+
         Email.send({
             Host: "smtp.gmail.com",
-            Username: "mcnet-admin@mclean.ed.jp", // ←このパスワードを発行したメアド
-            Password: pass                  // ←ここに bayugwmzlvcgvffv を入れる
-            To: "mcnet-admin@mclean.ed.jp",       // ←まずは自分宛に届くかテスト
-            From: "mcnet-admin@mclean.ed.jp",     // ←ここが重要！Usernameと一文字でも違うと届きません
+            Username: ADMIN_EMAIL,
+            Password: DIRECT_APP_PASS, 
+            To: ADMIN_EMAIL,
+            From: ADMIN_EMAIL,
             Subject: `【テスト】${target} すみれ予約リスト`,
             Body: `<h3>${target} の予約状況（${filtered.length}名）</h3>` + tableHtml
-
-
         }).then(message => {
-            if(message === "OK") {
-                alert("送信成功！メールを確認してください。");
+            // ここで結果をはっきり表示
+            if (message === "OK") {
+                alert("✅ 送信成功しました！\nGmailの『送信済み』フォルダと『受信トレイ』を確認してください。");
             } else {
-                alert("エラー: " + message);
+                alert("❌ 送信失敗しました。\n理由: " + message);
             }
+        }).catch(err => {
+            alert("⚠️ 通信エラーが発生しました:\n" + err);
         });
     }
 
     function saveExtraFee() {
         const sSelect = document.getElementById('extra-student-select');
-        if(!sSelect.value) return;
+        if(!sSelect || !sSelect.value) { alert("園児を選択してください"); return; }
         const sName = sSelect.options[sSelect.selectedIndex].text;
         const item = document.getElementById('extra-item').value;
         const price = document.getElementById('extra-amount').value;
         if(!item || !price) { alert("項目と金額を入力してください"); return; }
-        document.getElementById('extra-status').innerText = `✅ ${sName}さんに ${item}(¥${price}) を仮登録しました。`;
+        document.getElementById('extra-status').innerText = `✅ ${sName}さんに ${item}(¥${price}) を記録しました。`;
     }
 </script>
 </body>
