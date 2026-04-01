@@ -3,116 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>すみれクラブ 予約ポータル</title>
+    <title>すみれクラブ予約ポータル</title>
     <style>
-        /* スマホ向けレスポンシブデザイン */
-        body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 20px; background: #f4f7f9; color: #333; line-height: 1.6; }
-        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; }
-        h1 { font-size: 22px; margin-bottom: 10px; color: #2c3e50; }
-        .date-display { font-size: 16px; color: #7f8c8d; margin-bottom: 25px; }
+        body { font-family: -apple-system, sans-serif; background-color: #f0f2f5; padding: 20px; display: flex; justify-content: center; }
+        .container { max-width: 450px; width: 100%; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        h1 { color: #333; font-size: 22px; margin-bottom: 10px; }
+        .description { color: #666; font-size: 14px; margin-bottom: 25px; line-height: 1.6; }
         
-        /* 状態表示バッジ */
-        .status-card { 
-            padding: 15px; 
-            border-radius: 12px; 
-            margin-bottom: 25px; 
-            font-weight: bold; 
-            font-size: 18px; 
-            text-align: center; /* 判定テキストを中央揃え */
-        }
-        .is-normal { background: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb; }
-        .is-holiday { background: #fff3e0; color: #ef6c00; border: 1px solid #ffe0b2; }
-
-        /* 大きなボタン */
-        .btn { 
-            display: block; 
-            width: 100%;
-            padding: 22px 0;
-            margin: 15px 0;
-            border: none; 
-            border-radius: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            text-decoration: none;
-            text-align: center; /* ボタンテキストを中央揃え */
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-sizing: border-box; 
-        }
-
+        .selection-box { background: #fff9f0; border: 1px solid #ffe0b2; padding: 15px; border-radius: 12px; margin-bottom: 25px; text-align: left; }
+        .selection-box h2 { font-size: 16px; color: #e65100; margin: 0 0 10px 0; display: flex; align-items: center; }
+        
+        .btn { display: block; width: 100%; padding: 18px; margin-bottom: 15px; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; text-decoration: none; transition: transform 0.1s; }
         .btn:active { transform: scale(0.98); }
         
-        .btn-weekday { background: #007bff; color: white; box-shadow: 0 4px 15px rgba(0,123,255,0.3); }
-        .btn-holiday { background: #ff9800; color: white; box-shadow: 0 4px 15px rgba(255,152,0,0.3); }
+        .btn-weekday { background-color: #4caf50; color: white; }
+        .btn-holiday { background-color: #ff9800; color: white; }
         
-        /* 完全に無効化するスタイル */
-        .btn-disabled {
-            background-color: #d1d5db !important; /* グレー */
-            color: #9ca3af !important;
-            box-shadow: none !important;
-            pointer-events: none; /* クリック不可 */
-            transform: none !important;
-            opacity: 0.6;
-        }
-        
-        .deadline-warning { background: #fee; color: #d32f2f; padding: 10px; border-radius: 8px; font-size: 14px; margin-top: 20px; border: 1px solid #ffcdd2; display: none; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 15px; }
+        .status-vacation { background: #fff3e0; color: #ef6c00; border: 1px solid #ffcc80; }
+        .status-normal { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+
+        .footer-note { font-size: 12px; color: #999; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>すみれクラブ 予約ポータル</h1>
-    <div id="today-date" class="date-display"></div>
+    <div id="period-status"></div>
+    <h1>すみれクラブ予約ポータル</h1>
     
-    <div id="status-area" class="status-card">判定中...</div>
+    <div class="description">
+        予約したいお日にちに合わせて、<br>ボタンを選択してください。
+    </div>
 
-    <a href="weekday.html" id="btn-w" class="btn btn-weekday">平日版 予約フォームへ</a>
-    <a href="holiday.html" id="btn-h" class="btn btn-holiday">休暇版 予約フォームへ</a>
+    <div class="selection-box">
+        <h2>💡 どちらを選べばいいですか？</h2>
+        <p style="font-size: 13px; margin: 5px 0;">
+            ✅ <b>通常の登園日</b>（新学期など）の予約<br>
+            　→ <span style="color:#4caf50; font-weight:bold;">平日版</span> を選択<br><br>
+            ✅ <b>長期休暇中</b>（夏・冬・春休み）の予約<br>
+            　→ <span style="color:#ff9800; font-weight:bold;">休暇版</span> を選択
+        </p>
+    </div>
 
-    <div id="deadline-msg" class="deadline-warning">
-        ⚠️ 本日の受付（明日の予約・変更）は15:30で終了しました。緊急の連絡は園までお電話ください。
+    <a href="weekday.html" class="btn btn-weekday">🟢 平日版 の予約・変更</a>
+    <a href="holiday.html" class="btn btn-holiday">🟠 休暇版 の予約・変更</a>
+
+    <div class="footer-note">
+        ※平日予約の締め切りは前日15:30までです。<br>
+        ※休暇版の変更・取消は14日前まで無料です。
     </div>
 </div>
 
 <script>
-    async function initPortal() {
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = now.getMonth() + 1;
-        const d = now.getDate();
-        const todayStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        
-        document.getElementById('today-date').innerText = `本日：${y}年${m}月${d}日`;
-
+    async function checkCurrentStatus() {
         try {
             const res = await fetch('output/holidays.json');
             const holidays = await res.json();
             
-            const statusArea = document.getElementById('status-area');
-            const btnW = document.getElementById('btn-w');
-            const btnH = document.getElementById('btn-h');
-
-            if (holidays.includes(todayStr)) {
-                statusArea.innerText = "🌸 現在は【休暇期間】です";
-                statusArea.className = "status-card is-holiday";
-                btnW.classList.add('btn-disabled');
-            } else {
-                statusArea.innerText = "🏫 現在は【平日期間】です";
-                statusArea.className = "status-card is-normal";
-                btnH.classList.add('btn-disabled');
-            }
+            const today = new Date().toISOString().split('T')[0];
+            const statusDiv = document.getElementById('period-status');
             
-            const deadline = new Date();
-            deadline.setHours(15, 30, 0);
-            if (now > deadline) {
-                document.getElementById('deadline-msg').style.display = "block";
+            if (holidays.includes(today)) {
+                statusDiv.innerHTML = '<span class="status-badge status-vacation">🌸 現在：長期休暇期間（春休み）です</span>';
+            } else {
+                statusDiv.innerHTML = '<span class="status-badge status-normal">🏫 現在：通常登園期間です</span>';
             }
-
         } catch (e) {
-            console.error("データの読み込みに失敗しました", e);
-            document.getElementById('status-area').innerText = "データ読み込みエラー";
+            console.log("Status check failed");
         }
     }
-    initPortal();
+    checkCurrentStatus();
 </script>
+
 </body>
 </html>

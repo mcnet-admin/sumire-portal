@@ -7,12 +7,13 @@
     <style>
         /* スマホで見やすいシンプルなデザイン */
         body { font-family: -apple-system, sans-serif; padding: 15px; background-color: #f8f9fa; }
-        .card { background: white; padding: 20px; border-radius: 10px; shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .item { margin-bottom: 20px; }
         label { display: block; font-weight: bold; margin-bottom: 8px; color: #333; }
-        select, input, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
-        .btn-submit { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .note { font-size: 12px; color: #666; margin-top: 5px; }
+        select, input, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
+        .btn-submit { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .note { font-size: 12px; color: #666; margin-top: 5px; line-height: 1.4; }
+        .error-msg { color: #d32f2f; font-size: 13px; font-weight: bold; margin-top: 5px; display: none; }
     </style>
 </head>
 <body>
@@ -20,10 +21,12 @@
 <div class="card">
     <h2>すみれクラブ予約 <span style="font-size: 14px; color: #007bff;">[平日用]</span></h2>
     
+    <div id="date-error" class="error-msg"></div>
+
     <form id="reservation-form">
         <div class="item">
             <label>① クラス</label>
-            <select id="class-select" required>
+            <select id="class-select" required onchange="updateStudentList()">
                 <option value="">選択してください</option>
             </select>
         </div>
@@ -46,8 +49,11 @@
 
         <div class="item">
             <label>④ 利用希望日</label>
-            <input type="date" id="date-select" required>
-            <p class="note">※前日15:30までに入力してください</p>
+            <input type="date" id="date-select" required onchange="validateDate()">
+            <p class="note">
+                ※長期休暇（春・夏・冬休み）は選択できません。<br>
+                ※平日予約の締め切りは【前日の15:30】です。
+            </p>
         </div>
 
         <div class="item">
@@ -89,42 +95,85 @@
     let masterData = {};
     let holidays = [];
 
-    // 1. JSON読み込み（初期化）
+    // 1. 初期化処理
     async function init() {
         try {
-            const resS = await fetch('output/students.json');
+            const [resS, resH] = await Promise.all([
+                fetch('output/students.json'),
+                fetch('output/holidays.json')
+            ]);
             masterData = await resS.json();
-            const resH = await fetch('output/holidays.json');
             holidays = await resH.json();
 
+            // クラス一覧の生成
             const classSel = document.getElementById('class-select');
             Object.keys(masterData).forEach(cls => {
-                const opt = new Option(cls, cls);
-                classSel.add(opt);
+                classSel.add(new Option(cls, cls));
             });
+
+            // カレンダーの選択可能範囲を設定（今日〜翌月末）
+            const dateInput = document.getElementById('date-select');
+            const now = new Date();
+            dateInput.min = now.toISOString().split('T')[0];
+            const maxDate = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+            dateInput.max = maxDate.toISOString().split('T')[0];
+
         } catch (e) {
-            alert("名簿データの読み込みに失敗しました。管理者に連絡してください。");
+            alert("データの読み込みに失敗しました。");
         }
     }
 
-    // 2. クラス選択に連動して園児名を更新
-    document.getElementById('class-select').onchange = function() {
-        const nameSel = document.getElementById('name-select');
-        nameSel.innerHTML = '<option value="">選択してください</option>';
-        const list = masterData[this.value] || [];
-        list.forEach(s => {
-            // 重要：valueにstudent_id、表示に名前をセット
-            nameSel.add(new Option(s.name, s.id)); 
-        });
-        nameSel.disabled = list.length === 0;
-    };
-    
-    // 3. 確認と送信のメイン処理
-    async function handleConfirm() {
-        // フォームデータの取得
+    // 2. クラス選択連動
+    function updateStudentList() {
         const classVal = document.getElementById('class-select').value;
         const nameSel = document.getElementById('name-select');
-        const selectedId = nameSel.value; // IDを取得
+        nameSel.innerHTML = '<option value="">選択してください</option>';
+        
+        if (classVal && masterData[classVal]) {
+            masterData[classVal].forEach(s => {
+                nameSel.add(new Option(s.name, s.id));
+            });
+            nameSel.disabled = false;
+        } else {
+            nameSel.disabled = true;
+        }
+    }
+
+    // 3. 日付の妥当性チェック（平日ルール）
+    function validateDate() {
+        const dateInput = document.getElementById('date-select');
+        const selectedDate = dateInput.value;
+        const errorDiv = document.getElementById('date-error');
+        errorDiv.style.display = "none";
+
+        if (!selectedDate) return;
+
+        // A. 休日リスト（春休み等）に含まれているか
+        if (holidays.includes(selectedDate)) {
+            errorDiv.innerText = "⚠️ 選択された日は休暇期間です。休暇版フォームを使用してください。";
+            errorDiv.style.display = "block";
+            dateInput.value = "";
+            return;
+        }
+
+        // B. 15:30締め切りルールの判定
+        const now = new Date();
+        const deadline = new Date(selectedDate);
+        deadline.setDate(deadline.getDate() - 1); // 前日
+        deadline.setHours(15, 30, 0, 0); // 15:30
+
+        if (now > deadline) {
+            errorDiv.innerText = "⚠️ 予約締め切り（前日15:30）を過ぎているため、システムからは入力できません。園までお電話ください。";
+            errorDiv.style.display = "block";
+            dateInput.value = "";
+        }
+    }
+
+    // 4. 送信処理
+    async function handleConfirm() {
+        const classVal = document.getElementById('class-select').value;
+        const nameSel = document.getElementById('name-select');
+        const selectedId = nameSel.value;
         const nameText = nameSel.options[nameSel.selectedIndex]?.text;
         const mode = document.getElementById('mode-select').value;
         const date = document.getElementById('date-select').value;
@@ -133,56 +182,35 @@
         const pickup = document.getElementById('pickup').value;
         const memo = document.getElementById('memo').value;
 
-        // 未入力チェック
         if (!classVal || !selectedId || !date) {
-            alert("クラス、名前、利用日を正しく選択してください。");
+            alert("未入力の項目があります。");
             return;
         }
 
-        // 名簿データから保護者メールアドレスを特定
+        // メールアドレス抽出
         const studentsInClass = masterData[classVal] || [];
         const studentInfo = studentsInClass.find(s => s.id === selectedId);
         const email01 = studentInfo ? studentInfo.parent_email01 : "";
         const email02 = studentInfo ? studentInfo.parent_email02 : "";
 
-        // 休日判定
-        if (holidays.includes(date)) {
-            alert("選択された日は休日（休暇期間）です。休暇版フォームから入力してください。");
-            return;
-        }
+        if (!confirm(`${date} の予約を「${mode}」で送信してよろしいですか？`)) return;
 
-        // 送信確認
-        if (!confirm(`${date} の予約を「${mode}」で送信してよろしいですか？`)) {
-            return;
-        }
-
-        // 送信ボタンの制御
         const btn = document.querySelector('.btn-submit');
-        const originalText = btn.innerText;
         btn.disabled = true;
         btn.innerText = "送信中...";
 
-        // GitHub設定
-        const p1 = "ghp_";
-        const p2 = "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS"; 
-        const GITHUB_TOKEN = p1 + p2;
+        const GITHUB_TOKEN = "ghp_" + "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS";
         const repo = "mcnet-admin/sumire-portal";
         const path = "data/reservations.json";
 
         try {
-            // 1. 現在のファイルを取得
             const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 headers: { "Authorization": `token ${GITHUB_TOKEN}` },
                 cache: "no-store"
             });
-            
-            if (!res.ok) throw new Error("データの取得に失敗しました");
-            
             const fileData = await res.json();
-            const sha = fileData.sha;
             const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
 
-            // 2. 新しい予約オブジェクトを作成（メールアドレスを含める）
             const newEntry = {
                 id: Date.now(),
                 type: "平日版",
@@ -190,8 +218,8 @@
                 date: date,
                 class: classVal,
                 name: nameText,
-                parent_email01: email01, // 追加
-                parent_email02: email02, // 追加
+                parent_email01: email01,
+                parent_email02: email02,
                 early_care: early,
                 end_time: endTime,
                 pickup: pickup,
@@ -201,33 +229,26 @@
 
             currentContent.push(newEntry);
 
-            // 3. GitHubへ保存
             const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 method: "PUT",
-                headers: {
-                    "Authorization": `token ${GITHUB_TOKEN}`,
-                    "Content-Type": "application/json",
-                },
+                headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    message: `Reservation Update: ${nameText}`,
+                    message: `Weekday Reservation: ${nameText}`,
                     content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))),
-                    sha: sha
+                    sha: fileData.sha
                 })
             });
 
             if (updateRes.ok) {
-                alert("予約が正常に送信されました。");
+                alert("平日予約が正常に送信されました。");
                 location.reload();
             } else {
-                throw new Error("GitHubへの保存に失敗しました");
+                throw new Error();
             }
-
         } catch (e) {
-            console.error(e);
-            alert("【エラー】送信できませんでした。通信環境を確認してください。");
-        } finally {
+            alert("送信に失敗しました。");
             btn.disabled = false;
-            btn.innerText = originalText;
+            btn.innerText = "内容を確認して送信";
         }
     }
 
