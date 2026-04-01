@@ -51,31 +51,28 @@
         <div class="item">
             <label>④ 利用希望日</label>
             <input type="date" id="date-select" required onchange="validateDate()">
-            <p class="note">
-                ※長期休暇（春・夏・冬休み）は選択できません。<br>
-                ※平日予約の締め切りは【前日の15:30】です。
-            </p>
+            <p class="note">※締め切りは前日の15:30です。</p>
         </div>
 
         <div class="item">
-            <label>⑤ 早朝預かり（7:30〜）</label>
-            <select id="early-time">
-                <option value="なし">利用しない</option>
-                <option value="あり">利用する</option>
+            <label>⑤ 利用時間帯（料金）</label>
+            <select id="time-cost-select" required>
+                <option value="">選択してください</option>
+                <optgroup label="早朝(7:30〜)">
+                    <option value="7:30-8:30" data-cost="200">7:30 - 8:30 (¥200)</option>
+                </optgroup>
+                <optgroup label="保育終了後〜延長">
+                    <option value="終了-15:00" data-cost="400">15:00まで (¥400)</option>
+                    <option value="終了-16:30" data-cost="600">16:30まで (¥600)</option>
+                    <option value="終了-17:00" data-cost="800">17:00まで (¥800)</option>
+                    <option value="終了-17:30" data-cost="1000">17:30まで (¥1,000)</option>
+                    <option value="終了-18:00" data-cost="1200">18:00まで (¥1,200)</option>
+                </optgroup>
             </select>
         </div>
 
         <div class="item">
-            <label>⑥ 終了時間</label>
-            <select id="end-time">
-                <option value="15:00">15:00まで</option>
-                <option value="16:30">16:30まで</option>
-                <option value="18:00">18:00まで（時間外）</option>
-            </select>
-        </div>
-
-        <div class="item">
-            <label>⑦ お迎えの方</label>
+            <label>⑥ お迎えの方</label>
             <select id="pickup">
                 <option value="母">母</option>
                 <option value="父">父</option>
@@ -84,8 +81,8 @@
         </div>
 
         <div class="item">
-            <label>⑧ 備考</label>
-            <textarea id="memo" rows="3" placeholder="お迎えがその他の場合や、連絡事項があれば記入してください"></textarea>
+            <label>⑦ 備考</label>
+            <textarea id="memo" rows="3" placeholder="連絡事項があれば記入してください"></textarea>
         </div>
 
         <button type="button" class="btn-submit" onclick="handleConfirm()">内容を確認して送信</button>
@@ -113,12 +110,7 @@
             const dateInput = document.getElementById('date-select');
             const now = new Date();
             dateInput.min = now.toISOString().split('T')[0];
-            const maxDate = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-            dateInput.max = maxDate.toISOString().split('T')[0];
-
-        } catch (e) {
-            alert("データの読み込みに失敗しました。");
-        }
+        } catch (e) { alert("データ読み込み失敗"); }
     }
 
     function updateStudentList() {
@@ -126,41 +118,32 @@
         const nameSel = document.getElementById('name-select');
         nameSel.innerHTML = '<option value="">選択してください</option>';
         if (classVal && masterData[classVal]) {
-            masterData[classVal].forEach(s => {
-                nameSel.add(new Option(s.name, s.id));
-            });
+            masterData[classVal].forEach(s => nameSel.add(new Option(s.name, s.id)));
             nameSel.disabled = false;
-        } else {
-            nameSel.disabled = true;
-        }
+        } else { nameSel.disabled = true; }
     }
 
     function validateDate() {
         const dateInput = document.getElementById('date-select');
-        const selectedDate = dateInput.value; 
         const errorDiv = document.getElementById('date-error');
         errorDiv.style.display = "none";
-        
-        if (!selectedDate) return;
+        if (!dateInput.value) return;
 
-        const formattedDateSlash = selectedDate.replace(/-/g, '/');
-        const isHoliday = holidays.includes(selectedDate) || holidays.includes(formattedDateSlash);
-
+        const isHoliday = holidays.includes(dateInput.value) || holidays.includes(dateInput.value.replace(/-/g, '/'));
         if (isHoliday) {
-            errorDiv.innerHTML = `⚠️ 選択された日は休暇期間です。<br><a href="holiday.html" style="color: #d32f2f; font-weight: bold;">[休暇版フォームはこちら]</a> から入力してください。`;
+            errorDiv.innerHTML = `⚠️ 選択された日は休暇期間です。<br><a href="holiday.html">[休暇版フォームはこちら]</a>`;
             errorDiv.style.display = "block";
             dateInput.value = "";
             return;
         }
 
         const now = new Date();
-        const targetDate = new Date(selectedDate);
-        const limitDate = new Date(targetDate);
-        limitDate.setDate(targetDate.getDate() - 1);
+        const limitDate = new Date(dateInput.value);
+        limitDate.setDate(limitDate.getDate() - 1);
         limitDate.setHours(15, 30, 0, 0);
 
         if (now > limitDate) {
-            errorDiv.innerText = "⚠️ 予約締め切り（前日15:30）を過ぎているため、園までお電話ください。";
+            errorDiv.innerText = "⚠️ 前日15:30を過ぎているため、園までお電話ください。";
             errorDiv.style.display = "block";
             dateInput.value = "";
         }
@@ -169,30 +152,19 @@
     async function handleConfirm() {
         const classVal = document.getElementById('class-select').value;
         const nameSel = document.getElementById('name-select');
-        const selectedId = nameSel.value;
-        const nameText = nameSel.options[nameSel.selectedIndex]?.text;
-        const mode = document.getElementById('mode-select').value;
         const date = document.getElementById('date-select').value;
-        const early = document.getElementById('early-time').value;
-        const endTime = document.getElementById('end-time').value;
-        const pickup = document.getElementById('pickup').value;
-        const memo = document.getElementById('memo').value;
+        const timeSel = document.getElementById('time-cost-select');
+        const selectedTime = timeSel.value;
+        const cost = timeSel.options[timeSel.selectedIndex]?.dataset.cost || 0;
 
-        if (!classVal || !selectedId || !date) {
-            alert("未入力の項目があります。");
-            return;
+        if (!classVal || !nameSel.value || !date || !selectedTime) {
+            alert("未入力の項目があります。"); return;
         }
 
-        const studentsInClass = masterData[classVal] || [];
-        const studentInfo = studentsInClass.find(s => s.id === selectedId);
-        const email01 = studentInfo ? studentInfo.parent_email01 : "";
-        const email02 = studentInfo ? studentInfo.parent_email02 : "";
-
-        if (!confirm(`${date} の予約を「${mode}」で送信してよろしいですか？`)) return;
+        if (!confirm(`合計 ¥${cost} で送信しますか？`)) return;
 
         const btn = document.querySelector('.btn-submit');
-        btn.disabled = true;
-        btn.innerText = "送信中...";
+        btn.disabled = true; btn.innerText = "送信中...";
 
         const GITHUB_TOKEN = "ghp_" + "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS";
         const repo = "mcnet-admin/sumire-portal";
@@ -200,53 +172,42 @@
 
         try {
             const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-                headers: { "Authorization": `token ${GITHUB_TOKEN}` },
-                cache: "no-store"
+                headers: { "Authorization": `token ${GITHUB_TOKEN}` }, cache: "no-store"
             });
             const fileData = await res.json();
             const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
 
-            const newEntry = {
+            const studentInfo = (masterData[classVal] || []).find(s => s.id === nameSel.value);
+
+            currentContent.push({
                 id: Date.now(),
                 type: "平日版",
-                mode: mode,
+                mode: document.getElementById('mode-select').value,
                 date: date,
                 class: classVal,
-                name: nameText,
-                parent_email01: email01,
-                parent_email02: email02,
-                early_care: early,
-                end_time: endTime,
-                pickup: pickup,
-                memo: memo,
+                name: nameSel.options[nameSel.selectedIndex].text,
+                time_frame: selectedTime,
+                cost: parseInt(cost),
+                pickup: document.getElementById('pickup').value,
+                memo: document.getElementById('memo').value,
+                parent_email01: studentInfo?.parent_email01 || "",
+                parent_email02: studentInfo?.parent_email02 || "",
                 timestamp: new Date().toLocaleString("ja-JP")
-            };
+            });
 
-            currentContent.push(newEntry);
-
-            const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+            await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 method: "PUT",
                 headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    message: `Weekday Reservation: ${nameText}`,
+                    message: `Weekday Res: ${date}`,
                     content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))),
                     sha: fileData.sha
                 })
             });
 
-            if (updateRes.ok) {
-                alert("平日予約が正常に送信されました。");
-                location.reload();
-            } else {
-                throw new Error();
-            }
-        } catch (e) {
-            alert("送信に失敗しました。");
-            btn.disabled = false;
-            btn.innerText = "内容を確認して送信";
-        }
+            alert("送信されました。"); location.reload();
+        } catch (e) { alert("失敗しました。"); btn.disabled = false; btn.innerText = "送信"; }
     }
-
     init();
 </script>
 </body>
