@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>すみれクラブ予約（平日版）</title>
     <style>
-        /* スマホで見やすいシンプルなデザイン */
         body { font-family: -apple-system, sans-serif; padding: 15px; background-color: #f8f9fa; }
         .card { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .item { margin-bottom: 20px; }
@@ -13,7 +12,7 @@
         select, input, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
         .btn-submit { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
         .note { font-size: 12px; color: #666; margin-top: 5px; line-height: 1.4; }
-        .error-msg { color: #d32f2f; font-size: 13px; font-weight: bold; margin-top: 5px; display: none; }
+        .error-msg { color: #d32f2f; font-size: 13px; font-weight: bold; margin-top: 5px; display: none; min-height: 1.5em; }
     </style>
 </head>
 <body>
@@ -95,7 +94,6 @@
     let masterData = {};
     let holidays = [];
 
-    // 1. 初期化処理
     async function init() {
         try {
             const [resS, resH] = await Promise.all([
@@ -105,13 +103,11 @@
             masterData = await resS.json();
             holidays = await resH.json();
 
-            // クラス一覧の生成
             const classSel = document.getElementById('class-select');
             Object.keys(masterData).forEach(cls => {
                 classSel.add(new Option(cls, cls));
             });
 
-            // カレンダーの選択可能範囲を設定（今日〜翌月末）
             const dateInput = document.getElementById('date-select');
             const now = new Date();
             dateInput.min = now.toISOString().split('T')[0];
@@ -123,7 +119,6 @@
         }
     }
 
-    // 2. クラス選択連動
     function updateStudentList() {
         const classVal = document.getElementById('class-select').value;
         const nameSel = document.getElementById('name-select');
@@ -139,37 +134,41 @@
         }
     }
 
-    // 3. 日付の妥当性チェック（平日ルール）
     function validateDate() {
         const dateInput = document.getElementById('date-select');
-        const selectedDate = dateInput.value;
+        const selectedDate = dateInput.value; 
         const errorDiv = document.getElementById('date-error');
         errorDiv.style.display = "none";
-
+        
         if (!selectedDate) return;
 
-        // A. 休日リスト（春休み等）に含まれているか
-        if (holidays.includes(selectedDate)) {
-            errorDiv.innerText = "⚠️ 選択された日は休暇期間です。休暇版フォームを使用してください。";
+        // スラッシュ形式も比較対象に含める（Excel由来対策）
+        const formattedDateSlash = selectedDate.replace(/-/g, '/');
+        const isHoliday = holidays.includes(selectedDate) || holidays.includes(formattedDateSlash);
+
+        // 1. 長期休暇チェック
+        if (isHoliday) {
+            errorDiv.innerText = "⚠️ 選択された日は休暇期間です。休暇版から入力してください。";
             errorDiv.style.display = "block";
             dateInput.value = "";
             return;
         }
 
-        // B. 15:30締め切りルールの判定
+        // 2. 締め切りチェック (前日15:30)
         const now = new Date();
-        const deadline = new Date(selectedDate);
-        deadline.setDate(deadline.getDate() - 1); // 前日
-        deadline.setHours(15, 30, 0, 0); // 15:30
+        const targetDate = new Date(selectedDate);
+        const limitDate = new Date(targetDate);
+        limitDate.setDate(targetDate.getDate() - 1);
+        limitDate.setHours(15, 30, 0, 0);
 
-        if (now > deadline) {
+        if (now > limitDate) {
             errorDiv.innerText = "⚠️ 予約締め切り（前日15:30）を過ぎているため、システムからは入力できません。園までお電話ください。";
             errorDiv.style.display = "block";
             dateInput.value = "";
+            return;
         }
     }
 
-    // 4. 送信処理
     async function handleConfirm() {
         const classVal = document.getElementById('class-select').value;
         const nameSel = document.getElementById('name-select');
@@ -187,7 +186,6 @@
             return;
         }
 
-        // メールアドレス抽出
         const studentsInClass = masterData[classVal] || [];
         const studentInfo = studentsInClass.find(s => s.id === selectedId);
         const email01 = studentInfo ? studentInfo.parent_email01 : "";
