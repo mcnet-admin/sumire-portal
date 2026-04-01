@@ -5,25 +5,88 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>すみれクラブ予約ポータル</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background-color: #f0f2f5; padding: 20px; display: flex; justify-content: center; }
-        .container { max-width: 450px; width: 100%; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
-        h1 { color: #333; font-size: 22px; margin-bottom: 10px; }
-        .description { color: #666; font-size: 14px; margin-bottom: 25px; line-height: 1.6; }
+        /* 全体の背景 */
+        body { 
+            font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0;
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start; /* 上端から配置 */
+            min-height: 100vh;
+        }
+
+        /* 白いカード枠 */
+        .container { 
+            max-width: 450px; 
+            width: 100%; 
+            background: white; 
+            padding: 25px; /* 内側の余白を調整 */
+            border-radius: 20px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+            text-align: center;
+            box-sizing: border-box; /* 枠線を含めたサイズ計算 */
+        }
+
+        h1 { color: #333; font-size: 20px; margin-bottom: 10px; }
         
-        .selection-box { background: #fff9f0; border: 1px solid #ffe0b2; padding: 15px; border-radius: 12px; margin-bottom: 25px; text-align: left; }
-        .selection-box h2 { font-size: 16px; color: #e65100; margin: 0 0 10px 0; display: flex; align-items: center; }
+        .description { color: #666; font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
         
-        .btn { display: block; width: 100%; padding: 18px; margin-bottom: 15px; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; text-decoration: none; transition: transform 0.1s; }
+        /* ガイドボックス */
+        .selection-box { 
+            background: #fff9f0; 
+            border: 1px solid #ffe0b2; 
+            padding: 15px; 
+            border-radius: 12px; 
+            margin-bottom: 20px; 
+            text-align: left; 
+        }
+        .selection-box h2 { font-size: 15px; color: #e65100; margin: 0 0 8px 0; }
+        
+        /* ボタン共通設定 */
+        .btn { 
+            display: block; 
+            width: 100%; 
+            padding: 16px 0; /* 高さを微調整 */
+            margin-bottom: 12px; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 17px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            text-decoration: none; 
+            transition: background 0.2s, transform 0.1s; 
+            box-sizing: border-box;
+        }
         .btn:active { transform: scale(0.98); }
         
         .btn-weekday { background-color: #4caf50; color: white; }
-        .btn-holiday { background-color: #ff9800; color: white; }
+        .btn-weekday:hover { background-color: #43a047; }
         
-        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 15px; }
+        .btn-holiday { background-color: #ff9800; color: white; }
+        .btn-holiday:hover { background-color: #f57c00; }
+        
+        /* 状態バッジ */
+        .status-badge { 
+            display: inline-block; 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            font-size: 12px; 
+            font-weight: bold; 
+            margin-bottom: 15px; 
+        }
         .status-vacation { background: #fff3e0; color: #ef6c00; border: 1px solid #ffcc80; }
         .status-normal { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
 
-        .footer-note { font-size: 12px; color: #999; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px; }
+        .footer-note { 
+            font-size: 11px; 
+            color: #999; 
+            margin-top: 15px; 
+            border-top: 1px solid #eee; 
+            padding-top: 15px; 
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -37,13 +100,13 @@
     </div>
 
     <div class="selection-box">
-        <h2>💡 どちらを選べばいいですか？</h2>
-        <p style="font-size: 13px; margin: 5px 0;">
-            ✅ <b>通常の登園日</b>（新学期など）の予約<br>
-            　→ <span style="color:#4caf50; font-weight:bold;">平日版</span> を選択<br><br>
-            ✅ <b>長期休暇中</b>（夏・冬・春休み）の予約<br>
-            　→ <span style="color:#ff9800; font-weight:bold;">休暇版</span> を選択
-        </p>
+        <h2 style="display: flex; align-items: center;">💡 どちらを選べばいいですか？</h2>
+        <div style="font-size: 13px; color: #555; line-height: 1.6;">
+            <b>・通常の登園日</b>（新学期など）の予約<br>
+            　→ <span style="color:#2e7d32; font-weight:bold;">平日版</span> を選択<br>
+            <b>・長期休暇中</b>（夏・冬・春休み）の予約<br>
+            　→ <span style="color:#e65100; font-weight:bold;">休暇版</span> を選択
+        </div>
     </div>
 
     <a href="weekday.html" class="btn btn-weekday">🟢 平日版 の予約・変更</a>
