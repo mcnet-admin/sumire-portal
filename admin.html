@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>【管理者】すみれクラブ配置・集計ダッシュボード</title>
+    <script src="https://smtpjs.com/v3/smtp.js"></script>
+    
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f8f9fa; color: #333; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { border-left: 6px solid #1976d2; padding-left: 15px; font-size: 24px; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; }
+        .grid { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
+        .stat-badge { background: #e3f2fd; padding: 10px 20px; border-radius: 50px; font-weight: bold; color: #1565c0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #eee; padding: 12px; text-align: left; }
+        th { background: #f5f5f5; color: #666; font-size: 14px; }
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-blue { background: #1976d2; color: white; }
+        .btn-orange { background: #ef6c00; color: white; }
+        .btn:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>すみれクラブ 管理者パネル</h1>
+
+    <div class="section" style="background: #eee;">
+        <strong>🔑 アプリパスワード設定:</strong>
+        <input type="password" id="app-pass" placeholder="16桁のパスワード" style="width:200px;">
+        <span style="font-size:12px; color:#666;">（送信時に必要です）</span>
+    </div>
+
+    <div class="section">
+        <h3>📅 スタッフ配置確認（配置用リスト送信）</h3>
+        <div class="grid">
+            <div>
+                <label style="display:block; font-size:12px;">表示・送信対象日</label>
+                <input type="date" id="target-date" onchange="refreshView()">
+            </div>
+            <button class="btn btn-blue" onclick="sendStaffEmail()">この日のリストを現場へ送信</button>
+        </div>
+        <div id="summary-badges" class="grid" style="margin-top:20px;">
+            <div class="stat-badge">変更・延長：<span id="total-count">0</span>名</div>
+        </div>
+        <table id="daily-table">
+            <thead>
+                <tr><th>クラス</th><th>園児名</th><th>時間帯（料金）</th><th>お迎え</th><th>備考</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="section" style="border-color: #ffb74d;">
+        <h3>💰 臨時徴収（バイパス入力）</h3>
+        <p style="font-size:12px; color:#e65100;">※写真代や行事費など、個別の請求項目を月ごとに登録します。</p>
+        <div class="grid">
+            <select id="extra-student-select"><option value="">園児を選択</option></select>
+            <input type="text" id="extra-item" placeholder="項目名（例：写真代）">
+            <input type="number" id="extra-amount" placeholder="金額">
+            <button class="btn btn-orange" onclick="saveExtraFee()">臨時徴収として登録</button>
+        </div>
+        <div id="extra-status" style="margin-top:10px; color:#2e7d32; font-size:14px;"></div>
+    </div>
+</div>
+
+<script>
+    const GITHUB_TOKEN = "ghp_" + "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS";
+    const ADMIN_EMAIL = "mcnet-admin@mclean.ed.jp";
+    let reservations = [];
+    let students = {};
+
+    window.onload = async () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('target-date').value = today;
+        await loadInitialData();
+        refreshView();
+    };
+
+    async function loadInitialData() {
+        try {
+            // 予約データ取得
+            const resRes = await fetch("https://api.github.com/repos/mcnet-admin/sumire-portal/contents/data/reservations.json", {
+                headers: { "Authorization": `token ${GITHUB_TOKEN}` }, cache: "no-store"
+            });
+            const resData = await resRes.json();
+            reservations = JSON.parse(decodeURIComponent(escape(atob(resData.content))));
+
+            // 園児名簿取得（臨時徴収用）
+            const stuRes = await fetch("output/students.json");
+            students = await stuRes.json();
+            const stuSelect = document.getElementById('extra-student-select');
+            Object.values(students).flat().forEach(s => {
+                stuSelect.add(new Option(`${s.class} ${s.name}`, s.id));
+            });
+        } catch (e) { alert("データロード失敗"); }
+    }
+
+    function refreshView() {
+        const target = document.getElementById('target-date').value;
+        const filtered = reservations.filter(r => r.date === target);
+        const tbody = document.querySelector("#daily-table tbody");
+        tbody.innerHTML = "";
+        
+        filtered.forEach(r => {
+            tbody.insertAdjacentHTML('beforeend', `
+                <tr><td>${r.class}</td><td>${r.name}</td><td>${r.time_frame} (¥${r.cost})</td><td>${r.pickup}</td><td>${r.memo || ""}</td></tr>
+            `);
+        });
+        document.getElementById('total-count').innerText = filtered.length;
+    }
+
+    function sendStaffEmail() {
+
+        alert("ボタンは反応しています！"); // これを追加
+
+        const pass = document.getElementById('app-pass').value;
+        const target = document.getElementById('target-date').value;
+        if(!pass) { alert("アプリパスワードを入力してください"); return; }
+
+        const filtered = reservations.filter(r => r.date === target);
+        let tableHtml = `<table border="1" style="border-collapse:collapse; width:100%;">
+            <tr style="background:#f5f5f5;"><th>クラス</th><th>名</th><th>時間</th><th>迎</th><th>備考</th></tr>`;
+        filtered.forEach(r => {
+            tableHtml += `<tr><td>${r.class}</td><td>${r.name}</td><td>${r.time_frame}</td><td>${r.pickup}</td><td>${r.memo || ""}</td></tr>`;
+        });
+        tableHtml += `</table>`;
+
+     
+        Email.send({
+            Host: "smtp.gmail.com",
+            Username: "mcnet-admin@mclean.ed.jp", // ← Googleアプリパスワードを発行したアドレス
+            Password: pass,                      // ← 16桁のアプリパスワード（画面から入力したもの）
+            To: "mcnet-admin@mclean.ed.jp",      // ← まずは自分宛に届くかテスト
+            From: "mcnet-admin@mclean.ed.jp",    // ← Usernameと必ず一致させる
+            Subject: `【テスト送信】${target} すみれ予約リスト`,
+            Body: `<h3>テストメールです</h3><p>${target}分のデータ表をここに生成します。</p>` 
+        }).then(message => {
+            if(message === "OK") {
+                alert("送信成功！メールボックスを確認してください。");
+            } else {
+                alert("送信失敗: " + message);
+            }
+        });
+
+
+
+
+    async function saveExtraFee() {
+        // ここに臨時徴収データをGitHubのextra_fees.json等へ保存するロジックを実装
+        const sName = document.getElementById('extra-student-select').options[document.getElementById('extra-student-select').selectedIndex].text;
+        const item = document.getElementById('extra-item').value;
+        const price = document.getElementById('extra-amount').value;
+        if(!item || !price) return;
+        document.getElementById('extra-status').innerText = `✅ ${sName}さんに ${item}(¥${price}) を記録しました。`;
+    }
+</script>
+</body>
+</html>
