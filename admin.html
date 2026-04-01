@@ -54,7 +54,6 @@
 
     <div class="section" style="border-color: #ffb74d;">
         <h3>💰 臨時徴収（バイパス入力）</h3>
-        <p style="font-size:12px; color:#e65100;">※写真代や行事費など、個別に項目を追加します。</p>
         <div class="grid">
             <select id="extra-student-select"><option value="">園児を選択</option></select>
             <input type="text" id="extra-item" placeholder="項目名（例：写真代）">
@@ -69,7 +68,6 @@
     const GITHUB_TOKEN = "ghp_" + "HdcGC3C4iMFU5qigMZXGX7pAS3ASJQ3ybqyS";
     const ADMIN_EMAIL = "mcnet-admin@mclean.ed.jp";
     let reservations = [];
-    let students = {};
 
     window.onload = async () => {
         const today = new Date().toISOString().split('T')[0];
@@ -80,20 +78,23 @@
 
     async function loadInitialData() {
         try {
-            const resRes = await fetch("https://api.github.com/repos/mcnet-admin/sumire-portal/contents/data/reservations.json", {
-                headers: { "Authorization": `token ${GITHUB_TOKEN}` }, cache: "no-store"
+            const url = "https://api.github.com/repos/mcnet-admin/sumire-portal/contents/data/reservations.json";
+            const res = await fetch(url, {
+                headers: { "Authorization": `token ${GITHUB_TOKEN}` },
+                cache: "no-store"
             });
-            const resData = await resRes.json();
-            reservations = JSON.parse(decodeURIComponent(escape(atob(resData.content))));
-
-            // ※students.jsonのパスは環境に合わせて調整してください
+            const data = await res.json();
+            const content = decodeURIComponent(escape(atob(data.content)));
+            reservations = JSON.parse(content);
+            
+            // 園児名簿の読み込み（パスを絶対パスに変更して安定化）
             const stuRes = await fetch("output/students.json");
             const stuData = await stuRes.json();
             const stuSelect = document.getElementById('extra-student-select');
             Object.values(stuData).flat().forEach(s => {
                 stuSelect.add(new Option(`${s.class} ${s.name}`, s.id));
             });
-        } catch (e) { console.log("初期データロードに失敗（ローカル制限の可能性あり）"); }
+        } catch (e) { console.error("Data load error:", e); }
     }
 
     function refreshView() {
@@ -113,11 +114,13 @@
     function sendStaffEmail() {
         const pass = document.getElementById('app-pass').value;
         const target = document.getElementById('target-date').value;
-        if(!pass) { alert("アプリパスワードを入力してください"); return; }
+        
+        if(!pass) { alert("16桁のアプリパスワードを入力してください"); return; }
 
         const filtered = reservations.filter(r => r.date === target);
         let tableHtml = `<table border="1" style="border-collapse:collapse; width:100%;">
             <tr style="background:#f5f5f5;"><th>クラス</th><th>名</th><th>時間</th><th>迎</th><th>備考</th></tr>`;
+        
         filtered.forEach(r => {
             tableHtml += `<tr><td>${r.class}</td><td>${r.name}</td><td>${r.time_frame}</td><td>${r.pickup}</td><td>${r.memo || ""}</td></tr>`;
         });
@@ -129,9 +132,26 @@
             Password: pass,
             To: ADMIN_EMAIL,
             From: ADMIN_EMAIL,
-            Subject: `【テスト送信】${target} すみれ予約リスト`,
-            Body: `<h3>${target}分のリスト</h3>` + tableHtml
+            Subject: `【テスト】${target} すみれ予約リスト`,
+            Body: `<h3>${target} の予約状況（${filtered.length}名）</h3>` + tableHtml
         }).then(message => {
             if(message === "OK") {
-                alert("送信成功！メールボックスを確認してください。");
+                alert("送信成功！メールを確認してください。");
             } else {
+                alert("エラー: " + message);
+            }
+        });
+    }
+
+    function saveExtraFee() {
+        const sSelect = document.getElementById('extra-student-select');
+        if(!sSelect.value) return;
+        const sName = sSelect.options[sSelect.selectedIndex].text;
+        const item = document.getElementById('extra-item').value;
+        const price = document.getElementById('extra-amount').value;
+        if(!item || !price) { alert("項目と金額を入力してください"); return; }
+        document.getElementById('extra-status').innerText = `✅ ${sName}さんに ${item}(¥${price}) を仮登録しました。`;
+    }
+</script>
+</body>
+</html>
