@@ -11,7 +11,7 @@
         .btn-back { display: inline-block; margin-bottom: 15px; color: #666; text-decoration: none; font-size: 14px; }
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        select, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        select, input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         .btn-submit { width: 100%; padding: 15px; background: #ff9800; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
         .info-box { background: #fff8e1; border: 1px solid #ffe082; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; line-height: 1.4; }
         .error-msg { color: #d32f2f; font-size: 14px; font-weight: bold; margin-bottom: 15px; background: #fff5f5; padding: 10px; border-radius: 5px; border: 1px solid #ffcdd2; display: none; }
@@ -35,60 +35,76 @@
 
     <div id="date-error" class="error-msg"></div>
 
-    <div class="form-group">
-        <label>① クラス</label>
-        <select id="class-select" onchange="updateStudentList()">
-            <option value="">選択してください</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label>② 園児名</label>
-        <select id="student-select" disabled>
-            <option value="">クラスを先に選択</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label>③ 操作種別</label>
-        <div class="mode-container">
-            <label class="mode-option"><input type="radio" name="v_mode" value="新規" checked><span class="mode-label">新規</span></label>
-            <label class="mode-option"><input type="radio" name="v_mode" value="変更"><span class="mode-label">変更</span></label>
-            <label class="mode-option"><input type="radio" name="v_mode" value="取消"><span class="mode-label">取消</span></label>
+    <form id="reservation-form">
+        <div class="form-group">
+            <label>① クラス</label>
+            <select id="class-select" required onchange="updateStudentList()">
+                <option value="">選択してください</option>
+            </select>
         </div>
-    </div>
- 
-    <div class="form-group">
-        <label>④ 利用希望日</label>
-        <input type="date" id="date-select" onchange="validateHolidayDate()">
-    </div>
 
-    <div class="form-group">
-        <label>⑤ 利用時間帯（料金）</label>
-        <select id="time-cost-select">
-            <option value="">選択してください</option>
-            <optgroup label="早朝のみ">
-                <option value="8:00-8:30" data-cost="200">8:00 - 8:30 (¥200)</option>
-            </optgroup>
-            <optgroup label="基本時間〜延長">
-                <option value="8:30-11:45" data-cost="500">8:30 - 11:45 (¥500)</option>
-                <option value="8:30-13:00" data-cost="700">8:30 - 13:00 (¥700)</option>
-                <option value="8:30-14:00" data-cost="900">8:30 - 14:00 (¥900)</option>
-                <option value="8:30-15:00" data-cost="1100">8:30 - 15:00 (¥1,100)</option>
-                <option value="8:30-16:00" data-cost="1300">8:30 - 16:00 (¥1,300)</option>
-                <option value="8:30-16:30" data-cost="1400">8:30 - 16:30 (¥1,400)</option>
-                <option value="8:30-17:00" data-cost="1600">8:30 - 17:00 (¥1,600)</option>
-                <option value="8:30-17:30" data-cost="1800">8:30 - 17:30 (¥1,800)</option>
-                <option value="8:30-18:00" data-cost="2000">8:30 - 18:00 (¥2,000)</option>
-            </optgroup>
-            <optgroup label="早朝 + 基本〜延長">
-                <option value="8:00-16:30" data-cost="1600">8:00 - 16:30 (¥1,600)</option>
-                <option value="8:00-18:00" data-cost="2200">8:00 - 18:00 (¥2,200)</option>
-            </optgroup>
-        </select>
-    </div>
+        <div class="form-group">
+            <label>② 園児名</label>
+            <select id="student-select" required disabled>
+                <option value="">クラスを先に選択</option>
+            </select>
+        </div>
 
-    <button class="btn-submit" onclick="submitForm()">この内容で申し込む</button>
+        <div class="form-group">
+            <label>③ 操作種別</label>
+            <div class="mode-container">
+                <label class="mode-option"><input type="radio" name="v_mode" value="新規" checked><span class="mode-label">新規</span></label>
+                <label class="mode-option"><input type="radio" name="v_mode" value="変更"><span class="mode-label">変更</span></label>
+                <label class="mode-option"><input type="radio" name="v_mode" value="取消"><span class="mode-label">取消</span></label>
+            </div>
+        </div>
+    
+        <div class="form-group">
+            <label>④ 利用希望日</label>
+            <input type="date" id="date-select" required onchange="validateHolidayDate()">
+        </div>
+
+        <div class="form-group">
+            <label>⑤ 利用時間帯（料金）</label>
+            <select id="time-cost-select" required>
+                <option value="">選択してください</option>
+                <optgroup label="早朝のみ">
+                    <option value="8:00-8:30" data-cost="200">8:00 - 8:30 (¥200)</option>
+                </optgroup>
+                <optgroup label="基本時間〜延長">
+                    <option value="8:30-11:45" data-cost="500">8:30 - 11:45 (¥500)</option>
+                    <option value="8:30-13:00" data-cost="700">8:30 - 13:00 (¥700)</option>
+                    <option value="8:30-14:00" data-cost="900">8:30 - 14:00 (¥900)</option>
+                    <option value="8:30-15:00" data-cost="1100">8:30 - 15:00 (¥1,100)</option>
+                    <option value="8:30-16:00" data-cost="1300">8:30 - 16:00 (¥1,300)</option>
+                    <option value="8:30-16:30" data-cost="1400">8:30 - 16:30 (¥1,400)</option>
+                    <option value="8:30-17:00" data-cost="1600">8:30 - 17:00 (¥1,600)</option>
+                    <option value="8:30-17:30" data-cost="1800">8:30 - 17:30 (¥1,800)</option>
+                    <option value="8:30-18:00" data-cost="2000">8:30 - 18:00 (¥2,000)</option>
+                </optgroup>
+                <optgroup label="早朝 + 基本〜延長">
+                    <option value="8:00-16:30" data-cost="1600">8:00 - 16:30 (¥1,600)</option>
+                    <option value="8:00-18:00" data-cost="2200">8:00 - 18:00 (¥2,200)</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>⑥ お迎えの方</label>
+            <select id="pickup">
+                <option value="母">母</option>
+                <option value="父">父</option>
+                <option value="その他">その他（備考欄に記入）</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>⑦ 備考</label>
+            <textarea id="memo" rows="3" placeholder="連絡事項があれば記入してください"></textarea>
+        </div>
+
+        <button type="button" class="btn-submit" onclick="submitForm()">この内容で申し込む</button>
+    </form>
 </div>
 
 <script>
@@ -154,6 +170,8 @@
         const timeSel = document.getElementById('time-cost-select');
         const selectedTime = timeSel.value;
         const selectedCost = timeSel.options[timeSel.selectedIndex]?.dataset.cost || 0;
+        const pickup = document.getElementById('pickup').value;
+        const memo = document.getElementById('memo').value;
 
         if (!classVal || !selectedId || !selectedDate || !selectedTime) {
             alert("未入力項目があります。"); return;
@@ -199,6 +217,8 @@
                 name: sName,
                 time_frame: selectedTime,
                 cost: parseInt(selectedCost),
+                pickup: pickup,
+                memo: memo,
                 parent_email01: email01,
                 parent_email02: email02,
                 timestamp: new Date().toLocaleString("ja-JP")
