@@ -127,14 +127,17 @@
         });
         tableHtml += `</table>`;
 
+    
         Email.send({
             Host: "smtp.gmail.com",
-            Username: ADMIN_EMAIL,
-            Password: pass,
-            To: ADMIN_EMAIL,
-            From: ADMIN_EMAIL,
+            Username: "mcnet-admin@mclean.ed.jp", // ←このパスワードを発行したメアド
+            Password: pass                  // ←ここに bayugwmzlvcgvffv を入れる
+            To: "mcnet-admin@mclean.ed.jp",       // ←まずは自分宛に届くかテスト
+            From: "mcnet-admin@mclean.ed.jp",     // ←ここが重要！Usernameと一文字でも違うと届きません
             Subject: `【テスト】${target} すみれ予約リスト`,
             Body: `<h3>${target} の予約状況（${filtered.length}名）</h3>` + tableHtml
+
+
         }).then(message => {
             if(message === "OK") {
                 alert("送信成功！メールを確認してください。");
