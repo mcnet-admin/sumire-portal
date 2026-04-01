@@ -64,13 +64,14 @@
 </div>
 
 <script>
+    // --- 基本設定 ---
     const GITHUB_TOKEN = "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";
     const ADMIN_EMAIL = "mcnet-admin@mclean.ed.jp";
-    // ここにアプリパスワードを直書きしました（スペースなし）
-    const DIRECT_APP_PASS = "bayugwmzlvcgvffv"; 
+    const DIRECT_APP_PASS = "bayugwmzlvcgvffv"; // スクリーンショットの16桁（スペースなし）
 
     let reservations = [];
 
+    // --- 起動時の処理 ---
     window.onload = async () => {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('target-date').value = today;
@@ -78,6 +79,7 @@
         refreshView();
     };
 
+    // --- GitHubからデータ読み込み ---
     async function loadInitialData() {
         try {
             const url = `https://api.github.com/repos/mcnet-admin/sumire-portal/contents/data/reservations.json`;
@@ -90,6 +92,7 @@
             const content = decodeURIComponent(escape(atob(data.content)));
             reservations = JSON.parse(content);
             
+            // 園児名簿の読み込み
             const stuRes = await fetch("output/students.json");
             const stuData = await stuRes.json();
             const stuSelect = document.getElementById('extra-student-select');
@@ -101,6 +104,7 @@
         }
     }
 
+    // --- 画面の表示更新 ---
     function refreshView() {
         const target = document.getElementById('target-date').value;
         const filtered = reservations.filter(r => r.date === target);
@@ -116,6 +120,7 @@
         document.getElementById('total-count').innerText = filtered.length;
     }
 
+    // --- メール送信処理 ---
     function sendStaffEmail() {
         const target = document.getElementById('target-date').value;
         const filtered = reservations.filter(r => r.date === target);
@@ -140,7 +145,6 @@
             Subject: `【テスト】${target} すみれ予約リスト`,
             Body: `<h3>${target} の予約状況（${filtered.length}名）</h3>` + tableHtml
         }).then(message => {
-            // ここで結果をはっきり表示
             if (message === "OK") {
                 alert("✅ 送信成功しました！\nGmailの『送信済み』フォルダと『受信トレイ』を確認してください。");
             } else {
@@ -151,6 +155,7 @@
         });
     }
 
+    // --- 臨時徴収（画面表示のみ） ---
     function saveExtraFee() {
         const sSelect = document.getElementById('extra-student-select');
         if(!sSelect || !sSelect.value) { alert("園児を選択してください"); return; }
@@ -162,4 +167,4 @@
     }
 </script>
 </body>
-</html>
+</html>S
