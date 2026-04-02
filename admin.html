@@ -123,15 +123,20 @@
         Email.send({
             Host: "smtp.gmail.com",
             Username: ADMIN_EMAIL,
-            Password: DIRECT_APP_PASS.replace(/\s+/g, ""), // ←念のためスペースを強制除去
+            Password: DIRECT_APP_PASS.trim(), // スペースを確実に排除
             To: ADMIN_EMAIL,
-            From: ADMIN_EMAIL,
+            From: "mcnet-admin@mclean.ed.jp", // ← アドレスを直接、引用符で囲む
             Subject: `【最新】${target} すみれ配置リスト`,
             Body: `<h3>${target} の予約（${filtered.length}名）</h3>` + tableHtml
-        }).then(message => alert("メール送信結果: " + message))
-          .catch(err => alert("送信失敗エラー: " + err));
-    }
+        }).then(message => {
+            if (message === "OK") {
+                alert("送信完了！送信済みトレイを確認してください。");
+            } else {
+                // ここで具体的なエラー（Authentication failed等）が表示されるはずです
+                alert("SMTPエラー: " + message);
+            }
+        });
+        }
 </script>
-
 </body>
 </html>
