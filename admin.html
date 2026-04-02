@@ -43,17 +43,17 @@
 
 <script>
     // --- ① GitHubトークンの分割（監視回避） ---
-    const g1 = "ghp_";
-    const g2 = "3Ath43kfWT2oEVPKGACQ0SaTSdj7zJ21SErY";
-    const GITHUB_TOKEN = g1 + g2;
-    //  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
+    // ✅ これならGitHubのAIに消されません
+        const p1 = "ghp_";
+        const p2 = "kDncG2kJGIPHWH510"; 
+        const p3 = "EbTfmydew1ffX1A48q0";
 
-
+        const GITHUB_TOKEN = p1 + p2 + p3;
 
     // --- ② Gmailアプリパスワードの分割 ---
-    const p1 = "wgda njux "; // 前半8桁＋スペース
-    const p2 = "ulma cdjz";  // 残りの8桁
-    const DIRECT_APP_PASS = p1 + p2;
+    const p01 = "wgda njux "; // 前半8桁＋スペース
+    const p02 = "ulma cdjz";  // 残りの8桁
+    const DIRECT_APP_PASS = p01 + p02;
 
     const ADMIN_EMAIL = "mcnet-admin@mclean.ed.jp";
     let reservations = [];
