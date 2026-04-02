@@ -104,23 +104,32 @@
     }
 
     function sendStaffEmail() {
+        alert("送信処理を開始します..."); // ←これが表示されるかチェック
         const target = document.getElementById('target-date').value;
         const filtered = reservations.filter(r => r.date === target);
         
+        if (filtered.length === 0) {
+            alert(target + " の予約データが0件のため、送信を中止します。");
+            return;
+        }
+
         let tableHtml = `<table border="1" style="border-collapse:collapse; width:100%;">
             <tr style="background:#f5f5f5;"><th>クラス</th><th>名</th><th>時間</th><th>備考</th></tr>
             ${filtered.map(r => `<tr><td>${r.class}</td><td>${r.name}</td><td>${r.time_frame}</td><td>${r.memo || ""}</td></tr>`).join('')}
         </table>`;
 
+        console.log("送信準備完了:", tableHtml);
+
         Email.send({
             Host: "smtp.gmail.com",
             Username: ADMIN_EMAIL,
-            Password: DIRECT_APP_PASS,
+            Password: DIRECT_APP_PASS.replace(/\s+/g, ""), // ←念のためスペースを強制除去
             To: ADMIN_EMAIL,
             From: ADMIN_EMAIL,
             Subject: `【最新】${target} すみれ配置リスト`,
             Body: `<h3>${target} の予約（${filtered.length}名）</h3>` + tableHtml
-        }).then(message => alert("メール送信結果: " + message));
+        }).then(message => alert("メール送信結果: " + message))
+          .catch(err => alert("送信失敗エラー: " + err));
     }
 </script>
 
