@@ -1,1 +1,36 @@
+name: 15:35 Daily Sumire Report
 
+on:
+  schedule:
+    # 毎日 日本時間 15:35（世界標準時 UTC 6:35）に実行
+    - cron: '35 6 * * *'
+  workflow_dispatch: # 手動でテスト実行したい時用
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Send email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          # --- 1. SMTPサーバーの設定 (Gmail) ---
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: mcnet-admin@mclean.ed.jp
+          # ✅ パスワードは後ほど GitHub Secrets に設定します
+          password: ${{ secrets.MAIL_KEY }}
+          
+          # --- 2. メールの内容設定 ---
+          subject: "【自動送信】すみれ配置リスト (${{ github.event.repository.updated_at }})"
+          to: mcnet-admin@mclean.ed.jp
+          from: "すみれシステム <mcnet-admin@mclean.ed.jp>"
+          # JSONファイルを読み取って本文に添付、または内容を加工する
+          # ここではシンプルに reservations.json の内容を通知します
+          body: |
+            お疲れ様です。本日のすみれクラブ配置リストです。
+            詳細は管理パネルを確認してください。
+            
+            https://mcnet-admin.github.io/sumire-portal/admin.html
