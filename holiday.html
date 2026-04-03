@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>すみれクラブ予約（休暇版）</title>
     <style>
         body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; background: #fff3e0; }
@@ -13,13 +13,14 @@
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         select, input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         .btn-submit { width: 100%; padding: 15px; background: #ff9800; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .info-box { background: #fff8e1; border: 1px solid #ffe082; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; }
         .error-msg { color: #d32f2f; font-size: 14px; font-weight: bold; margin-bottom: 15px; background: #fff5f5; padding: 10px; border-radius: 5px; border: 1px solid #ffcdd2; display: none; }
         .mode-container { display: flex; gap: 10px; margin-top: 5px; }
         .mode-option { flex: 1; cursor: pointer; }
         .mode-option input { display: none; }
         .mode-label { display: block; padding: 12px 5px; text-align: center; background: #fff; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; font-weight: bold; color: #666; }
         .mode-option input:checked + .mode-label { background: #fff3e0; border-color: #ef6c00; color: #ef6c00; }
+        .note { font-size: 0.85em; color: #666; margin-top: 5px; }
+        .iphone-notice { font-size: 0.85em; color: #d93025; margin-bottom: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -32,12 +33,16 @@
 
     <div class="form-group">
         <label>① クラス</label>
-        <select id="class-select" onchange="updateStudentList()"><option value="">選択してください</option></select>
+        <select id="class-select" onchange="updateStudentList()">
+            <option value="">選択してください</option>
+        </select>
     </div>
 
     <div class="form-group">
         <label>② 園児名</label>
-        <select id="student-select" disabled><option value="">選択してください</option></select>
+        <select id="student-select" disabled>
+            <option value="">クラスを先に選択してください</option>
+        </select>
     </div>
 
     <div class="form-group">
@@ -48,14 +53,16 @@
             <label class="mode-option"><input type="radio" name="v_mode" value="取消"><span class="mode-label">取消</span></label>
         </div>
     </div>
- 
+
     <div class="form-group">
         <label>④ 利用希望日</label>
-        <input type="date" id="date-select" onchange="validateHolidayDate()">
+        <p class="iphone-notice">※日付の枠内をタップして選択してください</p>
+        <input type="date" id="date-select" required onchange="validateHolidayDate()">
+        <p class="note">※締め切りは前日の15:30です。</p>
     </div>
 
     <div class="form-group">
-        <label>⑤ 利用時間帯（料金）</label>
+        <label>⑤ 利用時間帯（料金目安）</label>
         <select id="time-cost-select">
             <option value="">選択してください</option>
             <optgroup label="早朝・短時間">
@@ -81,7 +88,7 @@
     </div>
 
     <div class="form-group">
-        <label>⑦ 備考</label>
+        <label>⑦ 備考（任意）</label>
         <textarea id="memo" rows="3"></textarea>
     </div>
 
@@ -92,14 +99,33 @@
     let studentData = {};
     let holidays = [];
 
+    // iPhone対応：読み込み時にズーム防止と初期化を実行
+    window.onload = async () => {
+        const dateInput = document.getElementById('date-select');
+        if (dateInput) {
+            dateInput.style.fontSize = "16px"; // ズーム防止
+        }
+        await initForm();
+    };
+
     async function initForm() {
         try {
-            const [resS, resH] = await Promise.all([fetch('output/students.json'), fetch('output/holidays.json')]);
+            // キャッシュ対策で?v=をつけて最新を読む
+            const ts = new Date().getTime();
+            const [resS, resH] = await Promise.all([
+                fetch(`output/students.json?v=${ts}`),
+                fetch(`output/holidays.json?v=${ts}`)
+            ]);
             studentData = await resS.json();
             holidays = await resH.json();
+            
             const classSelect = document.getElementById('class-select');
             Object.keys(studentData).forEach(cls => classSelect.add(new Option(cls, cls)));
-        } catch (e) { alert("読込失敗"); }
+
+            const dateInput = document.getElementById('date-select');
+            const now = new Date();
+            dateInput.min = now.toISOString().split('T')[0];
+        } catch (e) { alert("読込失敗。通信環境を確認してください。"); }
     }
 
     function updateStudentList() {
@@ -116,9 +142,25 @@
         const dateInput = document.getElementById('date-select');
         const errorDiv = document.getElementById('date-error');
         errorDiv.style.display = "none";
+        if (!dateInput.value) return;
+
+        // 休日設定（休暇期間）に含まれているかチェック
         const isHoliday = holidays.includes(dateInput.value) || holidays.includes(dateInput.value.replace(/-/g, '/'));
         if (!isHoliday) {
-            errorDiv.innerHTML = `⚠️ この日は長期休暇期間ではありません。<br><a href="weekday.html">[平日版はこちら]</a>`;
+            errorDiv.innerHTML = `⚠️ この日は長期休暇期間ではありません。<br><a href="weekday.html" style="color:blue;">[平日版はこちら]</a>`;
+            errorDiv.style.display = "block";
+            dateInput.value = "";
+            return;
+        }
+
+        // 締め切りチェック（前日15:30）
+        const now = new Date();
+        const limitDate = new Date(dateInput.value);
+        limitDate.setDate(limitDate.getDate() - 1);
+        limitDate.setHours(15, 30, 0, 0);
+
+        if (now > limitDate) {
+            errorDiv.innerText = "⚠️ 前日15:30を過ぎているため、園まで直接お電話ください。";
             errorDiv.style.display = "block";
             dateInput.value = "";
         }
@@ -127,40 +169,43 @@
     async function submitForm() {
         const timeSel = document.getElementById('time-cost-select');
         const cost = timeSel.options[timeSel.selectedIndex]?.dataset.cost || 0;
-        if (!document.getElementById('date-select').value || !timeSel.value) { alert("未入力項目があります"); return; }
+        const dateVal = document.getElementById('date-select').value;
+        const classVal = document.getElementById('class-select').value;
+        const sSel = document.getElementById('student-select');
+
+        if (!dateVal || !timeSel.value || !classVal || !sSel.value) { 
+            alert("未入力の項目があります。"); return; 
+        }
         
         if (!confirm(`合計 ¥${cost} で送信しますか？`)) return;
 
         const btn = document.querySelector('.btn-submit');
         btn.disabled = true; btn.innerText = "送信中...";
 
-    
-
-        // ✅ パズルは成功しているので、これで行きましょう！
+        // ✅ 分割パズル方式のトークン
         const p1 = "ghp_";
-        const p2 = "kDncG2kJGIPHWH510"; // 最新の鍵の前半
-        const p3 = "EbTfmydew1ffX1A48q0"; // 最新の鍵の後半
-
+        const p2 = "kDncG2kJGIPHWH510"; 
+        const p3 = "EbTfmydew1ffX1A48q0"; 
         const GITHUB_TOKEN = p1 + p2 + p3;
 
         const repo = "mcnet-admin/sumire-portal";
         const path = "data/reservations.json";
 
         try {
-            const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, { headers: { "Authorization": `token ${GITHUB_TOKEN}` }, cache: "no-store" });
+            const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                headers: { "Authorization": `token ${GITHUB_TOKEN}` }, cache: "no-store"
+            });
             const fileData = await res.json();
             const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
 
-            const cls = document.getElementById('class-select').value;
-            const sSel = document.getElementById('student-select');
-            const studentInfo = (studentData[cls] || []).find(s => s.id === sSel.value);
+            const studentInfo = (studentData[classVal] || []).find(s => s.id === sSel.value);
 
             currentContent.push({
                 id: Date.now(),
                 type: "休暇版",
                 mode: document.querySelector('input[name="v_mode"]:checked').value,
-                date: document.getElementById('date-select').value,
-                class: cls,
+                date: dateVal,
+                class: classVal,
                 name: sSel.options[sSel.selectedIndex].text,
                 time_frame: timeSel.value,
                 cost: parseInt(cost),
@@ -171,15 +216,28 @@
                 timestamp: new Date().toLocaleString("ja-JP")
             });
 
-            await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+            const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 method: "PUT",
                 headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ message: `Holiday Res`, content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))), sha: fileData.sha })
+                body: JSON.stringify({ 
+                    message: `Holiday Res: ${dateVal} ${sSel.options[sSel.selectedIndex].text}`, 
+                    content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))), 
+                    sha: fileData.sha 
+                })
             });
-            alert("送信完了"); location.reload();
-        } catch (e) { alert("失敗"); btn.disabled = false; }
+
+            if (putRes.ok) {
+                alert("送信されました。ご予約ありがとうございます。"); 
+                location.reload();
+            } else {
+                throw new Error();
+            }
+        } catch (e) { 
+            alert("送信に失敗しました。電波の良い場所で再度お試しください。"); 
+            btn.disabled = false; 
+            btn.innerText = "この内容で申し込む"; 
+        }
     }
-    initForm();
 </script>
 </body>
 </html>

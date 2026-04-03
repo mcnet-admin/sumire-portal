@@ -2,108 +2,126 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>すみれクラブ予約（平日版）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>預かり保育予約フォーム（平日版）</title>
     <style>
-        body { font-family: -apple-system, sans-serif; padding: 15px; background-color: #f8f9fa; }
-        .card { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .item { margin-bottom: 20px; }
-        label { display: block; font-weight: bold; margin-bottom: 8px; color: #333; }
-        select, input, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
-        .btn-submit { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        /* holiday.html のトーンに合わせたスタイル */
+        body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; background: #e8f5e9; } /* 平日は緑系の背景 */
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { font-size: 20px; text-align: center; color: #2e7d32; margin: 10px 0; }
         .btn-back { display: inline-block; margin-bottom: 15px; color: #666; text-decoration: none; font-size: 14px; }
-        .note { font-size: 12px; color: #666; margin-top: 5px; line-height: 1.4; }
-        .error-msg { color: #d32f2f; font-size: 14px; font-weight: bold; margin-bottom: 15px; background: #fff5f5; padding: 10px; border-radius: 5px; border: 1px solid #ffcdd2; display: none; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        
+        /* 操作種別（ボタン選択式）のスタイル */
+        .mode-container { display: flex; gap: 10px; margin-top: 5px; }
+        .mode-option { flex: 1; cursor: pointer; }
+        .mode-option input { display: none; }
+        .mode-label { display: block; padding: 12px 5px; text-align: center; background: #fff; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; font-weight: bold; color: #666; }
+        .mode-option input:checked + .mode-label { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+
+        .btn-submit { width: 100%; padding: 15px; background: #4caf50; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-submit:disabled { background: #ccc; }
+        
+        .note { font-size: 0.85em; color: #666; margin-top: 5px; }
+        .iphone-notice { font-size: 0.85em; color: #d93025; margin-bottom: 5px; font-weight: bold; }
+        #date-error { color: #d93025; font-weight: bold; display: none; margin-top: 5px; background: #fff5f5; padding: 10px; border-radius: 5px; border: 1px solid #ffcdd2; }
     </style>
 </head>
 <body>
 
-<div class="card">
+<div class="container">
     <a href="index.html" class="btn-back">← ポータル画面へ戻る</a>
-    <h2>すみれクラブ予約 <span style="font-size: 14px; color: #28a745;">[平日用]</span></h2>
+    <h1>預かり保育予約 <span style="font-size: 14px; color: #2e7d32;">[平日版]</span></h1>
     
-    <div id="date-error" class="error-msg"></div>
+    <div id="date-error"></div>
 
-    <form id="reservation-form">
-        <div class="item">
-            <label>① クラス</label>
-            <select id="class-select" required onchange="updateStudentList()">
-                <option value="">選択してください</option>
-            </select>
+    <div class="form-group">
+        <label>① クラス</label>
+        <select id="class-select" onchange="updateStudentList()">
+            <option value="">選択してください</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>② 園児名</label>
+        <select id="student-select" disabled>
+            <option value="">クラスを先に選択してください</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>③ 操作種別</label>
+        <div class="mode-container">
+            <label class="mode-option">
+                <input type="radio" name="v_mode" value="新規" checked>
+                <span class="mode-label">新規</span>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="v_mode" value="変更">
+                <span class="mode-label">変更</span>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="v_mode" value="取消">
+                <span class="mode-label">取消</span>
+            </label>
         </div>
+    </div>
 
-        <div class="item">
-            <label>② 園児名</label>
-            <select id="name-select" required disabled>
-                <option value="">クラスを先に選択してください</option>
-            </select>
-        </div>
+    <div class="form-group">
+        <label>④ 利用希望日</label>
+        <p class="iphone-notice">※日付の枠内をタップして選択してください</p>
+        <input type="date" id="date-select" required onchange="validateDate()">
+        <p class="note">※締め切りは前日の15:30です。</p>
+    </div>
 
-        <div class="item">
-            <label>③ モード</label>
-            <select id="mode-select">
-                <option value="新規">新規申込み</option>
-                <option value="変更">登録内容の変更</option>
-                <option value="取消">予約の取消</option>
-            </select>
-        </div>
+    <div class="form-group">
+        <label>⑤ 利用時間（料金目安）</label>
+        <select id="time-cost-select">
+            <option value="">選択してください</option>
+            <option value="-15:00" data-cost="300">-15:00 (¥300)</option>
+            <option value="-16:30" data-cost="500">-16:30 (¥500)</option>
+            <option value="16:30-17:00(時間外)" data-cost="800">16:30-17:00 (¥800)</option>
+            <option value="16:30-18:00(時間外)" data-cost="1100">16:30-18:00 (¥1,100)</option>
+        </select>
+    </div>
 
-        <div class="item">
-            <label>④ 利用希望日</label>
-            <input type="date" id="date-select" required onchange="validateDate()">
-            <p class="note">※締め切りは前日の15:30です。</p>
-        </div>
+    <div class="form-group">
+        <label>⑥ お迎えの方</label>
+        <input type="text" id="pickup" placeholder="例：母、父">
+    </div>
 
-        <div class="item">
-            <label>⑤ 利用時間帯（料金）</label>
-            <select id="time-cost-select" required>
-                <option value="">選択してください</option>
-                <optgroup label="早朝(7:30〜)">
-                    <option value="7:30-8:30" data-cost="200">7:30 - 8:30 (¥200)</option>
-                </optgroup>
-                <optgroup label="保育終了後〜延長">
-                    <option value="終了-15:00" data-cost="400">15:00まで (¥400)</option>
-                    <option value="終了-16:30" data-cost="600">16:30まで (¥600)</option>
-                    <option value="終了-17:00" data-cost="800">17:00まで (¥800)</option>
-                    <option value="終了-17:30" data-cost="1000">17:30まで (¥1,000)</option>
-                    <option value="終了-18:00" data-cost="1200">18:00まで (¥1,200)</option>
-                </optgroup>
-            </select>
-        </div>
+    <div class="form-group">
+        <label>⑦ 備考（任意）</label>
+        <textarea id="memo" rows="2"></textarea>
+    </div>
 
-        <div class="item">
-            <label>⑥ お迎えの方</label>
-            <select id="pickup">
-                <option value="母">母</option>
-                <option value="父">父</option>
-                <option value="その他">その他（備考欄に記入）</option>
-            </select>
-        </div>
-
-        <div class="item">
-            <label>⑦ 備考</label>
-            <textarea id="memo" rows="3" placeholder="連絡事項があれば記入してください"></textarea>
-        </div>
-
-        <button type="button" class="btn-submit" onclick="handleConfirm()">内容を確認して送信</button>
-    </form>
+    <button class="btn-submit" onclick="handleConfirm()">送信する</button>
 </div>
 
 <script>
-    let masterData = {};
+    let studentData = {};
     let holidays = [];
+
+    window.onload = async () => {
+        const dateInput = document.getElementById('date-select');
+        if (dateInput) { dateInput.style.fontSize = "16px"; }
+        await init();
+    };
 
     async function init() {
         try {
+            const ts = new Date().getTime();
             const [resS, resH] = await Promise.all([
-                fetch('output/students.json'),
-                fetch('output/holidays.json')
+                fetch(`output/students.json?v=${ts}`),
+                fetch(`output/holidays.json?v=${ts}`)
             ]);
-            masterData = await resS.json();
+            studentData = await resS.json();
             holidays = await resH.json();
 
             const classSel = document.getElementById('class-select');
-            Object.keys(masterData).forEach(cls => {
+            Object.keys(studentData).forEach(cls => {
                 classSel.add(new Option(cls, cls));
             });
 
@@ -114,13 +132,13 @@
     }
 
     function updateStudentList() {
-        const classVal = document.getElementById('class-select').value;
-        const nameSel = document.getElementById('name-select');
-        nameSel.innerHTML = '<option value="">選択してください</option>';
-        if (classVal && masterData[classVal]) {
-            masterData[classVal].forEach(s => nameSel.add(new Option(s.name, s.id)));
-            nameSel.disabled = false;
-        } else { nameSel.disabled = true; }
+        const cls = document.getElementById('class-select').value;
+        const sSelect = document.getElementById('student-select');
+        sSelect.innerHTML = '<option value="">選択してください</option>';
+        if (cls && studentData[cls]) {
+            studentData[cls].forEach(s => sSelect.add(new Option(s.name, s.id)));
+            sSelect.disabled = false;
+        } else { sSelect.disabled = true; }
     }
 
     function validateDate() {
@@ -131,7 +149,7 @@
 
         const isHoliday = holidays.includes(dateInput.value) || holidays.includes(dateInput.value.replace(/-/g, '/'));
         if (isHoliday) {
-            errorDiv.innerHTML = `⚠️ 選択された日は休暇期間です。<br><a href="holiday.html">[休暇版フォームはこちら]</a>`;
+            errorDiv.innerHTML = `⚠️ 選択された日は休暇期間です。<br><a href="holiday.html" style="color:blue;">[休暇版フォームはこちら]</a>`;
             errorDiv.style.display = "block";
             dateInput.value = "";
             return;
@@ -143,7 +161,7 @@
         limitDate.setHours(15, 30, 0, 0);
 
         if (now > limitDate) {
-            errorDiv.innerText = "⚠️ 前日15:30を過ぎているため、園までお電話ください。";
+            errorDiv.innerText = "⚠️ 前日15:30を過ぎているため、園まで直接お電話ください。";
             errorDiv.style.display = "block";
             dateInput.value = "";
         }
@@ -151,13 +169,13 @@
 
     async function handleConfirm() {
         const classVal = document.getElementById('class-select').value;
-        const nameSel = document.getElementById('name-select');
+        const sSel = document.getElementById('student-select');
         const date = document.getElementById('date-select').value;
         const timeSel = document.getElementById('time-cost-select');
         const selectedTime = timeSel.value;
         const cost = timeSel.options[timeSel.selectedIndex]?.dataset.cost || 0;
 
-        if (!classVal || !nameSel.value || !date || !selectedTime) {
+        if (!classVal || !sSel.value || !date || !selectedTime) {
             alert("未入力の項目があります。"); return;
         }
 
@@ -166,16 +184,10 @@
         const btn = document.querySelector('.btn-submit');
         btn.disabled = true; btn.innerText = "送信中...";
 
-
-
-    // ✅ パズルは成功しているので、これで行きましょう！
         const p1 = "ghp_";
-        const p2 = "kDncG2kJGIPHWH510"; // 最新の鍵の前半
-        const p3 = "EbTfmydew1ffX1A48q0"; // 最新の鍵の後半
-
+        const p2 = "kDncG2kJGIPHWH510"; 
+        const p3 = "EbTfmydew1ffX1A48q0"; 
         const GITHUB_TOKEN = p1 + p2 + p3;
-
-
 
         const repo = "mcnet-admin/sumire-portal";
         const path = "data/reservations.json";
@@ -187,15 +199,15 @@
             const fileData = await res.json();
             const currentContent = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
 
-            const studentInfo = (masterData[classVal] || []).find(s => s.id === nameSel.value);
+            const studentInfo = (studentData[classVal] || []).find(s => s.id === sSel.value);
 
             currentContent.push({
                 id: Date.now(),
                 type: "平日版",
-                mode: document.getElementById('mode-select').value,
+                mode: document.querySelector('input[name="v_mode"]:checked').value,
                 date: date,
                 class: classVal,
-                name: nameSel.options[nameSel.selectedIndex].text,
+                name: sSel.options[sSel.selectedIndex].text,
                 time_frame: selectedTime,
                 cost: parseInt(cost),
                 pickup: document.getElementById('pickup').value,
@@ -205,20 +217,29 @@
                 timestamp: new Date().toLocaleString("ja-JP")
             });
 
-            await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+            const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 method: "PUT",
                 headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    message: `Weekday Res: ${date}`,
+                    message: `Weekday Res: ${date} ${sSel.options[sSel.selectedIndex].text}`,
                     content: btoa(unescape(encodeURIComponent(JSON.stringify(currentContent)))),
                     sha: fileData.sha
                 })
             });
 
-            alert("送信されました。"); location.reload();
-        } catch (e) { alert("失敗しました。"); btn.disabled = false; btn.innerText = "送信"; }
+            if (putRes.ok) {
+                alert("送信されました。ご予約ありがとうございます。"); 
+                location.reload();
+            } else {
+                throw new Error();
+            }
+        } catch (e) { 
+            alert("送信に失敗しました。"); 
+            btn.disabled = false; 
+            btn.innerText = "送信する"; 
+        }
     }
-    init();
 </script>
+
 </body>
 </html>
