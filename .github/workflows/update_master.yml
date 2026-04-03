@@ -24,17 +24,17 @@ jobs:
 
       - name: Run master_generator
         run: |
-          # scriptsフォルダに移動してから実行することでパスのズレを防ぎます
-          cd scripts
-          python master_generator.py
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+          # フォルダ構成に合わせてパスを修正しました
+          python scripts/master_generator.py
 
       - name: Commit and Push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
         run: |
           git config --global user.name "denton-admin-bot"
           git config --global user.email "denton@mclean.ed.jp"
-          # 全てのjsonファイルの変更をチェックして保存
+          # outputフォルダ内の全jsonファイルを保存対象にします
           git add output/*.json
           git commit -m "Update master data from Excel [skip ci]" || echo "No changes to commit"
           git push
