@@ -92,12 +92,28 @@
             const data = await res.json();
             const content = decodeURIComponent(escape(atob(data.content)));
             reservations = JSON.parse(content);
-            document.getElementById('loading-status').innerText = "✅ データ同期済み";
-            refreshView();
+
+    // キーが入力・変更されたら即座に読み込みを開始する
+            document.getElementById('staffToken').oninput = (e) => {
+            const tokenValue = e.target.value.trim();
+        // トークンが一定の長さ(40文字前後)になったら自動実行
+            if (tokenValue.length > 30) {
+                localStorage.setItem('github_token', tokenValue);
+                loadInitialData(); // ここでデータを読みに行く
+            }
+        };
+
+    // Enterキーでも動くように念のため追加
+            document.getElementById('staffToken').onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                loadInitialData();
+            }
         } catch (e) {
             document.getElementById('loading-status').innerText = "❌ 認証エラー（キーを確認）";
         }
-    }
+        
+
+
 
     async function uploadExcel() {
         const fileInput = document.getElementById('excelFile');
@@ -192,6 +208,7 @@
         ).join('');
         document.getElementById('total-count').innerText = filtered.length;
     }
+
 
     function sendStaffEmail() {
         const target = document.getElementById('target-date').value;
