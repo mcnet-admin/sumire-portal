@@ -23,4 +23,7 @@ jobs:
           pip install pandas reportlab
 
       - name: Run script
+        env:
+          # ✅ ここで「金庫のMAIL_KEY」をプログラムが使える名前に紐付けます
+          MAIL_KEY: ${{ secrets.MAIL_KEY }}
         run: python send_list.py
