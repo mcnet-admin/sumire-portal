@@ -1,0 +1,35 @@
+name: Update Student Master
+
+on:
+  push:
+    paths:
+      - 'data/finalDB.xlsx'  # このExcelが更新されたら起動
+  workflow_dispatch:        # 手動でボタンを押して動かすことも可能にする
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas openpyxl
+
+      - name: Run master_generator
+        run: python master_generator.py
+
+      - name: Commit and Push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.ADMIN_TOKEN }} # 先ほどの「ハンコ」を使用
+        run: |
+          git config --global user.name "denton-admin-bot"
+          git config --global user.email "denton@mclean.ed.jp"
+          git add output/students.json output/holidays.json
+          git commit -m "Update master data from Excel [skip ci]" || echo "No changes to commit"
+          git push
