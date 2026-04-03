@@ -2,137 +2,149 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>すみれクラブ 管理者パネル</title>
+    <title>すみれクラブ | スタッフ管理パネル</title>
     <script src="https://smtpjs.com/v3/smtp.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
         .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { border-left: 5px solid #1a73e8; padding-left: 15px; font-size: 24px; }
+        h1 { border-left: 5px solid #1a73e8; padding-left: 15px; font-size: 24px; color: #1a73e8; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa; }
         .status-badge { background: #e8f0fe; color: #1967d2; padding: 5px 15px; border-radius: 20px; font-size: 14px; margin-bottom: 20px; display: inline-block; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         th { background: #f8f9fa; }
-        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: #1a73e8; color: white; }
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: #1a73e8; color: white; font-weight: bold; }
+        .btn-update { background: #28a745; }
+        .token-input { font-size: 12px; padding: 5px; width: 300px; }
+        #upload-status { margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>すみれクラブ 管理者パネル</h1>
+    <h1>すみれクラブ スタッフ管理パネル</h1>
     <div id="loading-status" class="status-badge">⏳ データを読み込み中...</div>
 
-    <div class="control-panel">
+    <div class="section">
+        <h3>① 園児名簿の更新（Excelアップロード）</h3>
+        <p style="font-size: 0.9em; color: #666;">最新の <strong>finalDB.xlsx</strong> を選択して「更新」を押してください。</p>
+        <input type="file" id="excelFile" accept=".xlsx">
+        <button class="btn btn-update" onclick="uploadExcel()">GitHubの名簿を更新する</button>
+        <div id="upload-status"></div>
+    </div>
+
+    <div class="section">
+        <h3>② 予約状況の確認・自分宛に送信</h3>
         <input type="date" id="target-date" onchange="refreshView()">
-        <button class="btn" onclick="sendStaffEmail()">② この日のリストを自分宛に送信</button>
+        <button class="btn" onclick="sendStaffEmail()">この日のリストをメール送信</button>
+        
+        <div id="total-info" style="margin-top:20px; font-weight:bold;">
+            変更・延長数：<span id="total-count">0</span>名
+        </div>
+
+        <table id="daily-table">
+            <thead>
+                <tr><th>クラス</th><th>園児名</th><th>時間帯</th><th>お迎え</th><th>備考</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 
-    <div id="total-info" style="margin-top:20px; font-weight:bold;">
-        変更・延長：<span id="total-count">0</span>名
+    <div style="margin-top: 50px; border-top: 1px dashed #ccc; padding-top: 10px;">
+        <label style="font-size: 12px;">スタッフ認証キー (GitHub Token): </label>
+        <input type="password" id="staffToken" class="token-input" placeholder="ghp_...を入力">
+        <p style="font-size: 10px; color: #999;">※キーを入力するとデータが表示されます。一度入力するとブラウザに保存されます。</p>
     </div>
-
-    <table id="daily-table">
-        <thead>
-            <tr><th>クラス</th><th>園児名</th><th>時間帯</th><th>お迎え</th><th>備考</th></tr>
-        </thead>
-        <tbody></tbody>
-    </table>
 </div>
 
-<script src="https://smtpjs.com/v3/smtp.js"></script>
-
 <script>
-    // --- ① GitHubトークンのパズル ---
-    const p1 = "ghp_";
-    const p2 = "kDncG2kJGIPHWH510";
-    const p3 = "EbTfmydew1ffX1A48q0";
-    const GITHUB_TOKEN = p1 + p2 + p3;
-
-    // --- ② Gmailパスワードのパズル ---
-    const s1 = "wgda";
-    const s2 = "njux";
-    const s3 = "ulma";
-    const s4 = "cdjz";
+    const s1 = "wgda", s2 = "njux", s3 = "ulma", s4 = "cdjz";
     const mailKey = s1 + s2 + s3 + s4;
-
     const ADMIN_EMAIL = "mcnet-admin@mclean.ed.jp";
     let reservations = [];
 
     window.onload = async () => {
         document.getElementById('target-date').value = new Date().toISOString().split('T')[0];
-        await loadInitialData();
+        const savedToken = localStorage.getItem('github_token');
+        if (savedToken) {
+            document.getElementById('staffToken').value = savedToken;
+            await loadInitialData();
+        } else {
+            document.getElementById('loading-status').innerText = "🔑 認証キーを入力してください";
+        }
+    };
+
+    // キーが入力されたら自動で読み込み
+    document.getElementById('staffToken').onchange = (e) => {
+        localStorage.setItem('github_token', e.target.value);
+        loadInitialData();
     };
 
     async function loadInitialData() {
+        const token = document.getElementById('staffToken').value;
         try {
             const url = `https://api.github.com/repos/mcnet-admin/sumire-portal/contents/data/reservations.json`;
             const res = await fetch(url, {
-                headers: { "Authorization": `token ${GITHUB_TOKEN}` },
+                headers: { "Authorization": `token ${token}` },
                 cache: "no-store"
             });
-            if (!res.ok) throw new Error("GitHub通信エラー");
+            if (!res.ok) throw new Error();
             const data = await res.json();
             const content = decodeURIComponent(escape(atob(data.content)));
             reservations = JSON.parse(content);
             document.getElementById('loading-status').innerText = "✅ データ同期済み";
             refreshView();
         } catch (e) {
-            document.getElementById('loading-status').innerText = "❌ 読み込み失敗";
+            document.getElementById('loading-status').innerText = "❌ 認証エラー（キーを確認）";
         }
+    }
+
+    async function uploadExcel() {
+        const fileInput = document.getElementById('excelFile');
+        const token = document.getElementById('staffToken').value;
+        const status = document.getElementById('upload-status');
+        if (!fileInput.files[0] || !token) { alert('ファイルとキーを確認してください'); return; }
+
+        status.innerText = "⏳ アップロード中...";
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const content = e.target.result.split(',')[1];
+            try {
+                const getRes = await fetch(`https://api.github.com/repos/mcnet-admin/sumire-portal/contents/data/finalDB.xlsx`, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+                const getData = await getRes.json();
+                const putRes = await fetch(`https://api.github.com/repos/mcnet-admin/sumire-portal/contents/data/finalDB.xlsx`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: "Excel update", content: content, sha: getData.sha })
+                });
+                if (putRes.ok) {
+                    status.innerText = "✅ 更新成功！ロボットが名簿を再作成します（約1分）";
+                    status.style.color = "green";
+                }
+            } catch (err) { status.innerText = "❌ 失敗"; status.style.color = "red"; }
+        };
+        reader.readAsDataURL(fileInput.files[0]);
     }
 
     function refreshView() {
         const target = document.getElementById('target-date').value;
         const filtered = reservations.filter(r => r.date === target);
-        const tbody = document.querySelector("#daily-table tbody");
-        tbody.innerHTML = filtered.map(r => `
-            <tr>
-                <td>${r.class}</td>
-                <td>${r.name}</td>
-                <td>${r.time_frame}</td>
-                <td>${r.pickup || ""}</td>
-                <td>${r.memo || ""}</td>
-            </tr>
-        `).join('');
+        document.querySelector("#daily-table tbody").innerHTML = filtered.map(r => 
+            `<tr><td>${r.class}</td><td>${r.name}</td><td>${r.time_frame}</td><td>${r.pickup || ""}</td><td>${r.memo || ""}</td></tr>`
+        ).join('');
         document.getElementById('total-count').innerText = filtered.length;
     }
 
-    // --- 📧 送信関数の安定化版 ---
     function sendStaffEmail() {
-        alert("送信処理を開始します...");
         const target = document.getElementById('target-date').value;
         const filtered = reservations.filter(r => r.date === target);
-        
-        if (filtered.length === 0) {
-            alert(target + " の予約データが0件のため、送信を中止します。");
-            return;
-        }
-
-        let tableHtml = `<table border="1" style="border-collapse:collapse; width:100%;">
-            <tr style="background:#f5f5f5;"><th>クラス</th><th>名</th><th>時間</th><th>備考</th></tr>
-            ${filtered.map(r => `<tr><td>${r.class}</td><td>${r.name}</td><td>${r.time_frame}</td><td>${r.memo || ""}</td></tr>`).join('')}
-        </table>`;
-
-        // SMTPJS実行
-        try {
-            Email.send({
-                Host: "smtp.gmail.com",
-                Username: ADMIN_EMAIL,
-                Password: mailKey,
-                To: ADMIN_EMAIL,
-                From: ADMIN_EMAIL,
-                Subject: `【最新】${target} すみれ配置リスト`,
-                Body: `<h3>${target} の予約（${filtered.length}名）</h3>` + tableHtml
-            }).then(message => {
-                alert("サーバーからの回答: " + message);
-                if (message === "OK") {
-                    alert("送信成功！送信済みトレイを確認してください。");
-                }
-            }).catch(err => {
-                alert("送信プロセスでエラーが発生: " + err);
-            });
-        } catch (error) {
-            alert("致命的なエラー: " + error);
-        }
+        let tableHtml = `<table border="1">${filtered.map(r => `<tr><td>${r.class}</td><td>${r.name}</td></tr>`).join('')}</table>`;
+        Email.send({
+            Host: "smtp.gmail.com", Username: ADMIN_EMAIL, Password: mailKey, To: ADMIN_EMAIL, From: ADMIN_EMAIL,
+            Subject: `${target} すみれリスト`, Body: tableHtml
+        }).then(msg => alert("結果: " + msg));
     }
 </script>
 </body>
