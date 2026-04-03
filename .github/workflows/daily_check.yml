@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas reportlab
+          pip install pandas reportlab requests
 
       - name: Run script
         env:
