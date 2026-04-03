@@ -3,8 +3,8 @@ name: Update Student Master
 on:
   push:
     paths:
-      - 'data/finalDB.xlsx'  # このExcelが更新されたら起動
-  workflow_dispatch:        # 手動でボタンを押して動かすことも可能にする
+      - 'data/finalDB.xlsx'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,17 +19,22 @@ jobs:
 
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install pandas openpyxl
 
       - name: Run master_generator
-        run: python scripts/master_generator.py  # フォルダ名を指定
+        run: |
+          # scriptsフォルダに移動してから実行することでパスのズレを防ぎます
+          cd scripts
+          python master_generator.py
+        env:
+          PYTHONPATH: ${{ github.workspace }}
 
       - name: Commit and Push changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.ADMIN_TOKEN }} # 先ほどの「ハンコ」を使用
         run: |
           git config --global user.name "denton-admin-bot"
           git config --global user.email "denton@mclean.ed.jp"
-          git add output/students.json output/holidays.json
+          # 全てのjsonファイルの変更をチェックして保存
+          git add output/*.json
           git commit -m "Update master data from Excel [skip ci]" || echo "No changes to commit"
           git push
