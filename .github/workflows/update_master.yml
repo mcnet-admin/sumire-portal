@@ -22,7 +22,7 @@ jobs:
           pip install pandas openpyxl
 
       - name: Run master_generator
-        run: python master_generator.py
+        run: python scripts/master_generator.py  # フォルダ名を指定
 
       - name: Commit and Push changes
         env:
