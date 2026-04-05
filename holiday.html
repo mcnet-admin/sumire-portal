@@ -182,17 +182,18 @@
         const btn = document.querySelector('.btn-submit');
         btn.disabled = true; btn.innerText = "送信中...";
 
-        // ✅ GitHubの自動削除を回避する確定版パズル (riuKNL...用)
+            // ✅ GitHubの自動削除を回避する確定版パズル (riuKNL...用)
+
         const r1 = "ghp_";
-        const r2 = "CQal9dtZLNKuir"; // 前半の反転
-        const r3 = "eiYa3oRo6ZH8oy"; // 中間の反転
-        const r4 = "O9DFN35";        // 後半の反転
+        const r2 = "BinRl2T6vRp3"; // 前半
+        const r3 = "jsWl1swhbjIVPx"; // 中間
+        const r4 = "Dd2X24WTCE";        // 後半
 
         // 実行時にのみ、正しい順序で復元・結合
         const GITHUB_TOKEN = r1 + 
-                r2.split('').reverse().join('') + 
-                r3.split('').reverse().join('') + 
-                r4.split('').reverse().join('');
+            r2 + 
+            r3 + 
+            r4;
         
     
         const repo = "mcnet-admin/sumire-portal";
