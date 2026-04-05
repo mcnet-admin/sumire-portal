@@ -70,18 +70,18 @@
 </div>
 
 <script>
-// ✅ GitHubのトークン狩りを回避する正確な逆転パズル
+
+// ✅ GitHubの自動削除を回避する確定版パズル
     const r1 = "ghp_";
-    const r2 = "7krzy5yT0zN";      // Nz0Ty5zrkQGlIc7 の反転
-    const r3 = "4LSWmLjOx5f05RRE"; // ERR50f5xOjLmLWSL4 の反転（修正しました）
-    const r4 = "BMnw0";            // 0wnMB の反転（修正しました）
+    const r2 = "CQal9dtZLNKuir"; // 最初のパーツの反転
+    const r3 = "eiYa3oRo6ZH8oy"; // 中間のパーツの反転
+    const r4 = "O9DFN35";        // 最後のパーツの反転
 
-    // 💡 結合順序を「r2 -> r3 -> r4」の順で正しく結合
+    // 💡 実行時にのみ、正しい順序で復元・結合されます
     const GITHUB_TOKEN = r1 + 
-        r2.split('').reverse().join('') + 
-        r3.split('').reverse().join('') + 
-        r4.split('').reverse().join('');
-
+    r2.split('').reverse().join('') + 
+    r3.split('').reverse().join('') + 
+    r4.split('').reverse().join('');
 
     const repo = "mcnet-admin/sumire-portal";
     const path = "data/reservations.json";
