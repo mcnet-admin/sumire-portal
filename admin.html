@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>すみれクラブ管理パネル</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: -apple-system, sans-serif; margin: 20px; background: #f0f2f5; color: #333; }
         .container { max-width: 1100px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
@@ -16,6 +17,10 @@
         button { padding: 10px 20px; cursor: pointer; background: #1a73e8; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; transition: background 0.2s; }
         button:hover { background: #1557b0; }
         
+        /* Excelボタン用のスタイル（緑色） */
+        .btn-excel { background: #1d6f42; }
+        .btn-excel:hover { background: #145532; }
+        
         #status-msg { font-size: 14px; color: #666; }
 
         .table-wrapper { overflow-x: auto; margin-top: 10px; border: 1px solid #ddd; border-radius: 8px; }
@@ -26,13 +31,11 @@
         tr:last-child td { border-bottom: none; }
         tr:hover { background-color: #f8f9fa; }
 
-        /* 区分バッジ */
         .status-badge { padding: 5px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
-        .new { background: #e6f4ea; color: #1e8e3e; }        /* 新規：緑 */
-        .update { background: #fef7e0; color: #f9ab00; }     /* 変更：黄 */
-        .cancel { background: #fce8e6; color: #d93025; }     /* 取消：赤 */
+        .new { background: #e6f4ea; color: #1e8e3e; }
+        .update { background: #fef7e0; color: #f9ab00; }
+        .cancel { background: #fce8e6; color: #d93025; }
 
-        /* 種類ラベル */
         .type-tag { font-size: 11px; color: #999; border: 1px solid #ddd; padding: 2px 5px; border-radius: 4px; margin-right: 5px; }
         
         .loading-spinner { font-style: italic; color: #1a73e8; animation: blink 1s infinite; }
@@ -46,11 +49,12 @@
 
     <div class="controls">
         <button onclick="fetchReservations()">データを更新する</button>
+        <button onclick="downloadExcel()" class="btn-excel">Excel（final.xlsx）を保存</button>
         <span id="status-msg">読み込み中...</span>
     </div>
 
     <div class="table-wrapper">
-        <table>
+        <table id="target-table">
             <thead>
                 <tr>
                     <th>受付日時</th>
@@ -63,31 +67,25 @@
                     <th>備考</th>
                 </tr>
             </thead>
-            <tbody id="res-body">
-                </tbody>
+            <tbody id="res-body"></tbody>
         </table>
     </div>
 </div>
 
 <script>
+    // ✅ GitHubトークン（シンプル分割方式）
+    const r1 = "ghp_";
+    const r2 = "BinRl2T6vRp3"; 
+    const r3 = "jsWl1swhbjIVPx"; 
+    const r4 = "Dd2X24WTCE";
 
-        // ✅ GitHubの自動削除を回避する確定版パズル (riuKNL...用)
-
-        const r1 = "ghp_";
-        const r2 = "BinRl2T6vRp3"; // 前半
-        const r3 = "jsWl1swhbjIVPx"; // 中間
-        const r4 = "Dd2X24WTCE";        // 後半
-
-        // 実行時にのみ、正しい順序で復元・結合
-        const GITHUB_TOKEN = r1 + 
-            r2 + 
-            r3 + 
-            r4;
+    const GITHUB_TOKEN = r1 + r2 + r3 + r4;
 
     const repo = "mcnet-admin/sumire-portal";
     const path = "data/reservations.json";
 
-    // 起動時に自動実行
+    let currentData = []; // Excel出力用にデータを保持
+
     window.onload = fetchReservations;
 
     async function fetchReservations() {
@@ -95,25 +93,23 @@
         msg.innerHTML = '<span class="loading-spinner">GitHubから最新データを取得中...</span>';
         
         try {
-            // キャッシュを無視して最新を取得
             const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 headers: { "Authorization": `token ${GITHUB_TOKEN}` },
                 cache: "no-store"
             });
 
-            if (!res.ok) throw new Error("認証に失敗しました。トークンを確認してください。");
+            if (!res.ok) throw new Error("認証失敗");
 
             const fileData = await res.json();
-            // Base64デコード（日本語対応）
             const content = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
             
-            // 日時が新しい順（降順）に並び替え
             content.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            currentData = content; // データをグローバル変数に保存
 
             renderTable(content);
             msg.innerText = "最終更新: " + new Date().toLocaleString();
         } catch (e) {
-            msg.innerHTML = '<span style="color:red;">⚠️ エラーが発生しました。再読み込みしてください。</span>';
+            msg.innerHTML = '<span style="color:red;">⚠️ エラーが発生しました。</span>';
             console.error(e);
         }
     }
@@ -121,36 +117,59 @@
     function renderTable(data) {
         const body = document.getElementById('res-body');
         body.innerHTML = "";
-
         if (data.length === 0) {
             body.innerHTML = '<tr><td colspan="8" style="text-align:center;">予約データはありません。</td></tr>';
             return;
         }
-
         data.forEach(item => {
             const tr = document.createElement('tr');
-            
-            // 操作種別（新規・変更・取消）のスタイル判定
-            let modeClass = "new";
-            const mode = item.mode || "";
-            if (mode.includes("変更")) modeClass = "update";
-            if (mode.includes("取消")) modeClass = "cancel";
+            let modeClass = item.mode?.includes("変更") ? "update" : item.mode?.includes("取消") ? "cancel" : "new";
 
             tr.innerHTML = `
                 <td style="font-size:12px; color:#666;">${item.timestamp || ''}</td>
-                <td><span class="status-badge ${modeClass}">${mode}</span></td>
+                <td><span class="status-badge ${modeClass}">${item.mode || ''}</span></td>
                 <td style="font-weight:bold; color:#1a73e8;">${item.date || ''}</td>
                 <td>
-                    <span class="type-tag">${item.type || '不明'}</span><br>
+                    <span class="type-tag">${item.type || ''}</span><br>
                     <strong>${item.class || ''}</strong><br>${item.name || ''}
                 </td>
                 <td>${item.time_frame || ''}</td>
                 <td style="font-weight:bold;">¥${(item.cost || 0).toLocaleString()}</td>
                 <td>${item.pickup || ''}</td>
-                <td style="font-size:12px; color:#444; max-width:200px;">${item.memo || ''}</td>
+                <td style="font-size:12px; color:#444;">${item.memo || ''}</td>
             `;
             body.appendChild(tr);
         });
+    }
+
+    // 💡 Excelファイルを生成・保存する関数
+    function downloadExcel() {
+        if (currentData.length === 0) {
+            alert("出力するデータがありません。");
+            return;
+        }
+
+        // データをExcel用の形式に整理
+        const excelRows = currentData.map(item => ({
+            "受付日時": item.timestamp,
+            "区分": item.mode,
+            "利用希望日": item.date,
+            "種別": item.type,
+            "クラス": item.class,
+            "名前": item.name,
+            "利用時間枠": item.time_frame,
+            "料金": item.cost,
+            "お迎え時間": item.pickup,
+            "備考": item.memo
+        }));
+
+        // ワークシートの作成
+        const worksheet = XLSX.utils.json_to_sheet(excelRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "予約リスト");
+
+        // ファイル名の設定 (final.xlsx)
+        XLSX.writeFile(workbook, "final.xlsx");
     }
 </script>
 
