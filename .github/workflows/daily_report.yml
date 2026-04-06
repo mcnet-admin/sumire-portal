@@ -2,8 +2,8 @@ name: "15:35 Daily Sumire Report"
 
 on:
   schedule:
-    - cron: '35 6 * * *' # 日本時間 15:35
-  workflow_dispatch:     # 手動実行ボタン
+    - cron: '35 6 * * *' # 日本時間 15:35（世界標準時 6:35）
+  workflow_dispatch:     # 手動実行ボタンを有効化
 
 jobs:
   send-report:
@@ -12,7 +12,7 @@ jobs:
       - name: "Checkout repository"
         uses: actions/checkout@v4
 
-      - name: "Setup Node"
+      - name: "Setup Node.js"
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -20,14 +20,15 @@ jobs:
       - name: "Generate Clean Report"
         id: generate
         run: |
-          # 1. 明日の日付を取得 (JST)
+          # 1. 明日の日付を取得 (JSTを考慮)
           TARGET_DATE=$(date -d '1 day' +'%Y-%m-%d')
           echo "TARGET_DATE=$TARGET_DATE" >> $GITHUB_ENV
           
-          # 2. scripts/daily_report.js を実行してHTML名簿を生成
+          # 2. scripts/daily_report.js を実行してHTML名簿を受け取る
+          # 注意：scripts/daily_report.js が存在することを確認してください
           REPORT_HTML=$(node scripts/daily_report.js)
           
-          # 3. 生成したHTMLを環境変数に格納
+          # 3. 複数行のHTMLを環境変数に安全に格納
           echo "REPORT_BODY<<EOF" >> $GITHUB_ENV
           echo "$REPORT_HTML" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
@@ -38,12 +39,12 @@ jobs:
           server_address: smtp.gmail.com
           server_port: 465
           username: "mcnet-admin@mclean.ed.jp"
+          # GitHubのSettings > Secrets > Actions で MAIL_KEY を設定している必要があります
           password: ${{ secrets.MAIL_KEY }}
           
           subject: "【自動送信】明日(${{ env.TARGET_DATE }})のすみれ確定リスト"
           to: "mcnet-admin@mclean.ed.jp"
           from: "すみれシステム <mcnet-admin@mclean.ed.jp>"
-          # scripts/daily_report.js で作ったHTMLを本文にする
+          # ここでスクリプトの結果をメール本文に流し込む
           html_body: ${{ env.REPORT_BODY }}
-          # テキスト形式のバックアップ
-          body: "明日の予約リストです。HTML表示ができるメールソフトで確認してください。"
+          body: "明日の予約リストです。HTML表示対応のメールソフトでご覧ください。"
