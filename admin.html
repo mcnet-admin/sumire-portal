@@ -7,25 +7,30 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: -apple-system, sans-serif; margin: 20px; background: #f0f2f5; color: #333; }
-        .container { max-width: 1100px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         h1 { color: #1a73e8; border-bottom: 3px solid #1a73e8; padding-bottom: 12px; margin-top: 0; display: flex; justify-content: space-between; align-items: center; }
-        h1 span { font-size: 14px; color: #666; font-weight: normal; }
+        
         .controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px; flex-wrap: wrap; }
         button { padding: 10px 18px; cursor: pointer; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; transition: opacity 0.2s; }
         button:hover { opacity: 0.8; }
-        .btn-update { background: #1a73e8; } /* 青：更新 */
-        .btn-excel-dl { background: #1d6f42; } /* 緑：保存 */
-        .btn-excel-ul { background: #6c757d; } /* 灰：読込 */
+        
+        .btn-blue { background: #1a73e8; }   /* 最新取得 */
+        .btn-green { background: #1d6f42; }  /* 予約Excel保存 */
+        .btn-purple { background: #673ab7; } /* 名簿更新 */
+        .btn-red { background: #d93025; margin-left: auto; } /* 年度更新 */
+
         #status-msg { font-size: 13px; color: #666; margin-left: 5px; }
+
         .table-wrapper { overflow-x: auto; margin-top: 10px; border: 1px solid #ddd; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; background: white; min-width: 900px; }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
         th, td { border-bottom: 1px solid #eee; padding: 12px; text-align: left; font-size: 13px; }
         th { background-color: #f8f9fa; color: #5f6368; position: sticky; top: 0; }
+        
         .status-badge { padding: 4px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }
         .new { background: #e6f4ea; color: #1e8e3e; }
         .update { background: #fef7e0; color: #f9ab00; }
         .cancel { background: #fce8e6; color: #d93025; }
-        .type-tag { font-size: 11px; color: #999; border: 1px solid #ddd; padding: 1px 4px; border-radius: 4px; }
+        
         .loading-spinner { font-style: italic; color: #1a73e8; animation: blink 1s infinite; }
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
@@ -36,17 +41,21 @@
     <h1>すみれクラブ管理パネル <span>スタッフ専用</span></h1>
 
     <div class="controls">
-        <button onclick="fetchReservations()" class="btn-update">最新に更新</button>
-        <button onclick="downloadExcel()" class="btn-excel-dl">Excel保存</button>
+        <button onclick="fetchReservations()" class="btn-blue">最新の予約を表示</button>
+        <button onclick="downloadExcel()" class="btn-green">予約をExcel保存</button>
         
-        <input type="file" id="excel-upload" accept=".xlsx" style="display:none;" onchange="uploadExcel(event)">
-        <button onclick="document.getElementById('excel-upload').click()" class="btn-excel-ul">Excelから一括更新</button>
+        <span style="border-left: 2px solid #ccc; margin: 0 10px; height: 30px;"></span>
+
+        <input type="file" id="master-upload" accept=".xlsx" style="display:none;" onchange="uploadMasterOnly(event)">
+        <button onclick="document.getElementById('master-upload').click()" class="btn-purple">名簿Excelを反映（園児異動など）</button>
         
         <span id="status-msg">準備完了</span>
+
+        <button onclick="resetForNewSemester()" class="btn-red">【年度更新】予約履歴をリセット</button>
     </div>
 
     <div class="table-wrapper">
-        <table id="target-table">
+        <table>
             <thead>
                 <tr>
                     <th>受付日時</th>
@@ -73,16 +82,17 @@
     const GITHUB_TOKEN = r1 + r2 + r3 + r4;
 
     const repo = "mcnet-admin/sumire-portal";
-    const path = "data/reservations.json";
+    const path = "data/reservations.json"; // 予約履歴ファイル
+    const masterPath = "data/master_list.json"; // 💡 名簿データ（適宜書き換えてください）
 
     let currentData = [];
 
     window.onload = fetchReservations;
 
-    // 1. データ取得
+    // 1. 予約履歴の取得
     async function fetchReservations() {
         const msg = document.getElementById('status-msg');
-        msg.innerHTML = '<span class="loading-spinner">GitHubから取得中...</span>';
+        msg.innerHTML = '<span class="loading-spinner">取得中...</span>';
         try {
             const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 headers: { "Authorization": `token ${GITHUB_TOKEN}` },
@@ -93,26 +103,26 @@
             content.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             currentData = content;
             renderTable(content);
-            msg.innerText = "最終更新: " + new Date().toLocaleString();
+            msg.innerText = "最終表示: " + new Date().toLocaleString();
         } catch (e) {
-            msg.innerHTML = '<span style="color:red;">⚠️ エラー発生</span>';
+            msg.innerHTML = '<span style="color:red;">⚠️ エラー</span>';
         }
     }
 
     // 2. 表描画
     function renderTable(data) {
         const body = document.getElementById('res-body');
-        body.innerHTML = data.length ? "" : '<tr><td colspan="8" style="text-align:center;">データなし</td></tr>';
+        body.innerHTML = data.length ? "" : '<tr><td colspan="8" style="text-align:center;">予約はありません。</td></tr>';
         data.forEach(item => {
             const tr = document.createElement('tr');
             let mCls = item.mode?.includes("変更") ? "update" : item.mode?.includes("取消") ? "cancel" : "new";
             tr.innerHTML = `
-                <td style="color:#666;">${item.timestamp || ''}</td>
+                <td style="color:#666; font-size:12px;">${item.timestamp || ''}</td>
                 <td><span class="status-badge ${mCls}">${item.mode || ''}</span></td>
                 <td style="font-weight:bold; color:#1a73e8;">${item.date || ''}</td>
-                <td><span class="type-tag">${item.type || ''}</span><br><strong>${item.class || ''}</strong><br>${item.name || ''}</td>
+                <td><strong>${item.class || ''}</strong><br>${item.name || ''}</td>
                 <td>${item.time_frame || ''}</td>
-                <td style="font-weight:bold;">¥${(item.cost || 0).toLocaleString()}</td>
+                <td>¥${(item.cost || 0).toLocaleString()}</td>
                 <td>${item.pickup || ''}</td>
                 <td style="font-size:12px; color:#444;">${item.memo || ''}</td>
             `;
@@ -120,26 +130,27 @@
         });
     }
 
-    // 3. Excel保存
+    // 3. 予約をExcel保存
     function downloadExcel() {
-        if (!currentData.length) return alert("データがありません");
+        if (!currentData.length) return alert("データなし");
         const rows = currentData.map(item => ({
-            "受付日時": item.timestamp, "区分": item.mode, "利用希望日": item.date, "種別": item.type,
-            "クラス": item.class, "名前": item.name, "利用時間枠": item.time_frame, "料金": item.cost,
-            "お迎え時間": item.pickup, "備考": item.memo
+            "受付日時": item.timestamp, "区分": item.mode, "利用希望日": item.date,
+            "クラス": item.class, "名前": item.name, "利用時間枠": item.time_frame,
+            "料金": item.cost, "お迎え時間": item.pickup, "備考": item.memo
         }));
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "予約リスト");
-        XLSX.writeFile(wb, "final.xlsx");
+        XLSX.writeFile(wb, "予約履歴バックアップ.xlsx");
     }
 
-    // 4. Excelから一括更新（逆転パズルなし、シンプル構成）
-    async function uploadExcel(event) {
+    // 4. 【名簿のみ】をExcelから更新（予約履歴は触らない）
+    async function uploadMasterOnly(event) {
         const file = event.target.files[0];
-        if (!file || !confirm("ExcelデータでGitHubを上書き更新しますか？")) return;
+        if (!file || !confirm("名簿（園児名・クラス）のみを更新しますか？\n現在の予約履歴には影響しません。")) return;
+        
         const msg = document.getElementById('status-msg');
-        msg.innerText = "更新中...";
+        msg.innerText = "名簿更新中...";
 
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -147,31 +158,55 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                const formatted = jsonData.map(row => ({
-                    timestamp: row["受付日時"] || "", mode: row["区分"] || "", date: row["利用希望日"] || "",
-                    type: row["種別"] || "", class: row["クラス"] || "", name: row["名前"] || "",
-                    time_frame: row["利用時間枠"] || "", cost: Number(row["料金"]) || 0,
-                    pickup: row["お迎え時間"] || "", memo: row["備考"] || ""
-                }));
-
-                const resGet = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                
+                // GitHubの「名簿JSON」を上書き
+                const resGet = await fetch(`https://api.github.com/repos/${repo}/contents/${masterPath}`, {
                     headers: { "Authorization": `token ${GITHUB_TOKEN}` }
                 });
                 const fInfo = await resGet.json();
 
-                const resPut = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                const resPut = await fetch(`https://api.github.com/repos/${repo}/contents/${masterPath}`, {
                     method: "PUT",
                     headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        message: "Update from Excel",
-                        content: btoa(unescape(encodeURIComponent(JSON.stringify(formatted, null, 2)))),
+                        message: "Master list update",
+                        content: btoa(unescape(encodeURIComponent(JSON.stringify(jsonData, null, 2)))),
                         sha: fInfo.sha
                     })
                 });
-                if (resPut.ok) { alert("更新完了！"); fetchReservations(); }
-            } catch (err) { alert("失敗: " + err.message); }
+                
+                if (resPut.ok) { alert("名簿の更新が完了しました！予約画面の名前リストが新しくなります。"); }
+            } catch (err) { alert("名簿更新失敗: " + err.message); }
+            msg.innerText = "完了";
         };
         reader.readAsArrayBuffer(file);
+    }
+
+    // 5. 年度更新（予約履歴の全消去）
+    async function resetForNewSemester() {
+        if (!confirm("【警告】現在のすべての予約履歴を削除し、空にしますか？\n（新年度を迎えるためのリセット操作です）")) return;
+        const password = prompt("最終確認のため reset と入力してください。");
+        if (password !== "reset") return;
+
+        const msg = document.getElementById('status-msg');
+        msg.innerText = "リセット中...";
+        try {
+            const resGet = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                headers: { "Authorization": `token ${GITHUB_TOKEN}` }
+            });
+            const fInfo = await resGet.json();
+
+            const resPut = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                method: "PUT",
+                headers: { "Authorization": `token ${GITHUB_TOKEN}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: "Annual Reset",
+                    content: btoa("[]"),
+                    sha: fInfo.sha
+                })
+            });
+            if (resPut.ok) { alert("履歴を初期化しました。"); fetchReservations(); }
+        } catch (err) { alert("失敗"); }
     }
 </script>
 </body>
