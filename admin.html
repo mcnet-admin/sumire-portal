@@ -110,12 +110,28 @@
     }
 
     // 2. 表描画
+// 2. 表描画（空行除外 & 履歴の物語を読みやすく）
     function renderTable(data) {
         const body = document.getElementById('res-body');
-        body.innerHTML = data.length ? "" : '<tr><td colspan="8" style="text-align:center;">予約はありません。</td></tr>';
-        data.forEach(item => {
+        body.innerHTML = ""; // 一旦クリア
+
+        // 【ポイント1】もし履歴を「古い順（昇順）」で追いたい場合は、ここで再ソート
+        // 履歴を追うのが目的なら timestamp の昇順にします
+        const displayData = [...data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        let validCount = 0;
+
+        displayData.forEach(item => {
+            // 【ポイント2】名前(name)がない、または空欄のデータは完全に無視して表示しない
+            if (!item.name || item.name.trim() === "") {
+                return; 
+            }
+            
+            validCount++;
+
             const tr = document.createElement('tr');
             let mCls = item.mode?.includes("変更") ? "update" : item.mode?.includes("取消") ? "cancel" : "new";
+            
             tr.innerHTML = `
                 <td style="color:#666; font-size:12px;">${item.timestamp || ''}</td>
                 <td><span class="status-badge ${mCls}">${item.mode || ''}</span></td>
@@ -128,6 +144,10 @@
             `;
             body.appendChild(tr);
         });
+
+        if (validCount === 0) {
+            body.innerHTML = '<tr><td colspan="8" style="text-align:center;">有効な予約データはありません。</td></tr>';
+        }
     }
 
     // 3. 予約をExcel保存
